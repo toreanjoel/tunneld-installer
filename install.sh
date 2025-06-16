@@ -75,13 +75,13 @@ fi
 interfaces=( $(ip -o link show | awk -F': ' '{print $2}' | grep -v 'lo') )
 
 menu_items=()
-for i in "${interfaces[@]}"; do menu_items+=("$i" "$i"); done
+for i in "${interfaces[@]}"; do menu_items+=("$i" ""); done
 up_iface=$(whiptail --title "Upstream Interface (Internet)" --menu "Select the interface that connects to the internet (WiFi):" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3)
 cancel_check
 
 menu_items=()
-for i in "${interfaces[@]}"; do [ "$i" != "$up_iface" ] && menu_items+=("$i" "$i") ; done
-selected=$(whiptail --title "Downstream Interfaces (LAN)" --checklist "Select interface(s) to share internet with (Ethernet):" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3 | tr -d '"')
+for i in "${interfaces[@]}"; do [ "$i" != "$up_iface" ] && menu_items+=("$i" "") ; done
+selected=$(whiptail --title "Downstream Interfaces (LAN)" --menu "Select interface(s) to share internet with (Ethernet):" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3)
 cancel_check
 down_iface="$selected"
 
@@ -132,7 +132,7 @@ chmod +x "$INSTALL_DIR/generate_blacklist.sh"
 "$INSTALL_DIR/generate_blacklist.sh"
 
 # 10. Cloudflare Service
-cf_domain=$(whiptail --title "Tunnel Domain" --inputbox "Enter your public domain (e.g. mydevice.example.com):" 10 60 3>&1 1>&2 2>&3)
+cf_domain=$(whiptail --title "Tunnel Domain" --inputbox "Enter a public Cloudflare hosted domain. (e.g. example.com):" 10 60 3>&1 1>&2 2>&3)
 cf_zone_id=$(whiptail --title "Cloudflare Zone ID" --inputbox "Enter your Cloudflare Zone ID:" 10 60 3>&1 1>&2 2>&3)
 cf_api_key=$(whiptail --title "Cloudflare API Token" --inputbox "Enter the API token with DNS edit permissions:" 10 60 3>&1 1>&2 2>&3)
 
@@ -177,7 +177,6 @@ Gateway IP: $gateway
 Access Dashboard: http://$gateway or http://tunneld.local
 
 Default login credentials:
-Username: admin
-Password: (auto-generated at first boot)
+This will be request on first login
 
 Thank you for installing Tunneld." 20 75
