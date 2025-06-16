@@ -86,7 +86,7 @@ cancel_check
 down_iface="$selected"
 
 # 5. Network Settings
-subnet_ip=$(whiptail --title "Gateway IP Address" --inputbox "Enter the gateway IP address (e.g. 10.0.0.1):" 10 60 "10.0.0.1" 3>&1 1>&2 2>&3)
+gateway=$(whiptail --title "Gateway IP Address" --inputbox "Enter the gateway IP address (e.g. 10.0.0.1):" 10 60 "10.0.0.1" 3>&1 1>&2 2>&3)
 dhcp_start=$(whiptail --title "DHCP Range Start" --inputbox "Start of DHCP range (e.g. 10.0.0.2):" 10 60 "10.0.0.2" 3>&1 1>&2 2>&3)
 dhcp_end=$(whiptail --title "DHCP Range End" --inputbox "End of DHCP range (e.g. 10.0.0.100):" 10 60 "10.0.0.100" 3>&1 1>&2 2>&3)
 
@@ -98,7 +98,7 @@ sudo dpkg -i cloudflared.deb || true
 # 7. dhcpcd.conf
 cat <<EOF > "$ETC_DIR/dhcpcd.conf"
 interface $down_iface
-static ip_address=${subnet_ip}/24
+static ip_address=${gateway}/24
 nohook wpa_supplicant
 metric 250
 
@@ -112,12 +112,12 @@ cat <<EOF > "$ETC_DIR/dnsmasq.conf"
 port=5336
 interface=$down_iface
 dhcp-range=${dhcp_start},${dhcp_end},255.255.255.0,infinite
-dhcp-option=option:router,$subnet_ip
-dhcp-option=option:dns-server,$subnet_ip
+dhcp-option=option:router,$gateway
+dhcp-option=option:dns-server,$gateway
 no-resolv
 server=127.0.0.1#5335
 conf-file=$BLACKLIST_DIR/dnsmasq-system.blacklist
-address=/tunneld.local/$subnet_ip
+address=/tunneld.local/$gateway
 EOF
 
 # 9. Blacklist Script
@@ -157,6 +157,7 @@ Environment=CF_ZONE_ID=$cf_zone_id
 Environment=CF_DOMAIN=$cf_domain
 Environment=WIFI_INTERFACE=$up_iface
 Environment=LAN_INTERFACE=$down_iface
+Environment=GATEWAY=$gateway
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=tunneld
@@ -172,8 +173,8 @@ sudo systemctl enable "$SYSTEMD_DIR/tunneld.service" && sudo systemctl start tun
 
 whiptail --title "Installation Complete" --msgbox "Tunneld installation complete.
 
-Gateway IP: $subnet_ip
-Access Dashboard: http://$subnet_ip or http://tunneld.local
+Gateway IP: $gateway
+Access Dashboard: http://$gateway or http://tunneld.local
 
 Default login credentials:
 Username: admin
