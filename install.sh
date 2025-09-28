@@ -174,7 +174,7 @@ sudo systemctl enable "$SYSTEMD_DIR/tunneld.service" && sudo systemctl start tun
 whiptail --title "Installation Complete" --msgbox "Tunneld installation complete.
 
 Gateway IP: $gateway
-Access Dashboard: http://$gateway or http://tunneld.local
+Access Dashboard: http://$gateway or http://tunneld.lan
 
 Default login credentials:
 This will be request on first login
