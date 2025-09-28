@@ -158,6 +158,7 @@ Environment=CF_DOMAIN=$cf_domain
 Environment=WIFI_INTERFACE=$up_iface
 Environment=LAN_INTERFACE=$down_iface
 Environment=GATEWAY=$gateway
+Environment=HOSTNAME=tunneld.lan
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=tunneld
