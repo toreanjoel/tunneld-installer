@@ -264,19 +264,11 @@ whiptail --title "Installation Complete" --msgbox \
 
 App:    $APP_DIR
 Config: $CONFIG_DIR
-Logs:   $LOG_DIR
 Data:   $DATA_DIR
-
-Saved values:
-  $CONFIG_DIR/interfaces.conf
-  $CONFIG_DIR/dhcpcd.conf
-  $CONFIG_DIR/dnsmasq.conf
-  $DNSCRYPT_DIR/dnscrypt-proxy.toml
 
 Access:
   http://$GATEWAY
   http://tunneld.lan
-  http://gateway.tunneld.lan
 
 Manage:
   systemctl status dnscrypt-proxy dnsmasq dhcpcd tunneld
