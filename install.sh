@@ -42,7 +42,7 @@ This wizard will:
 Press OK to begin." 20 74
 
 # ========== 1) Dependencies ==========
-whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: curl, ca-certificates, iptables, iptables-persistent, dnsmasq, dhcpcd5, unzip, whiptail." 10 74
+whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip." 10 74
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
 
@@ -58,9 +58,9 @@ mapfile -t ifaces < <(ip -o link show | awk -F': ' '{print $2}' | grep -vE '^(lo
 if [ ${#ifaces[@]} -eq 0 ]; then whiptail --msgbox "No interfaces found." 8 50; exit 1; fi
 
 menu_items=(); for i in "${ifaces[@]}"; do menu_items+=("$i" ""); done
-UP_IFACE=$(whiptail --title "Step 2/8: Upstream (Internet)" --menu "Select upstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
+UP_IFACE=$(whiptail --title "Step 2/7: Upstream (Internet)" --menu "Select upstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
 menu_items=(); for i in "${ifaces[@]}"; do [ "$i" != "$UP_IFACE" ] && menu_items+=("$i" ""); done
-DOWN_IFACE=$(whiptail --title "Step 2/8: Downstream (LAN)" --menu "Select downstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
+DOWN_IFACE=$(whiptail --title "Step 2/7: Downstream (LAN)" --menu "Select downstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
 
 GATEWAY=$(whiptail --title "Gateway IP" --inputbox "Gateway IP (CIDR /24 assumed)" 10 60 "$GATEWAY" 3>&1 1>&2 2>&3) || exit 1
 DHCP_START=$(whiptail --title "DHCP Start" --inputbox "Start address" 10 60 "$DHCP_START" 3>&1 1>&2 2>&3) || exit 1
@@ -86,7 +86,7 @@ nohook wpa_supplicant
 metric 100
 EOF
 ln -sf "$CONFIG_DIR/dhcpcd.conf" /etc/dhcpcd.conf
-whiptail --title "Step 2/8" --msgbox "Network settings saved:\nUP: $UP_IFACE\nDOWN: $DOWN_IFACE\nGATEWAY: $GATEWAY\nDHCP: $DHCP_START → $DHCP_END" 12 60
+whiptail --title "Step 2/7" --msgbox "Network settings saved:\nUP: $UP_IFACE\nDOWN: $DOWN_IFACE\nGATEWAY: $GATEWAY\nDHCP: $DHCP_START → $DHCP_END" 12 60
 
 # ========== 3) dnsmasq ==========
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
@@ -108,7 +108,7 @@ address=/tunneld.lan/$GATEWAY
 address=/gateway.tunneld.lan/$GATEWAY
 EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
-whiptail --title "Step 3/8" --msgbox "dnsmasq configured to forward (5336 → 127.0.0.1:5335)." 9 70
+whiptail --title "Step 3/7" --msgbox "dnsmasq configured to forward (5336 → 127.0.0.1:5335)." 9 70
 
 # ========== 4) dnscrypt-proxy (Mullvad only) ==========
 DNSCRYPT_VERSION="2.1.5"
@@ -172,7 +172,7 @@ ProtectHome=true
 WantedBy=multi-user.target
 EOF
 
-whiptail --title "Step 4/8" --msgbox "dnscrypt-proxy installed and locked to Mullvad DoH (server_names = ['mullvad-doh'])." 10 74
+whiptail --title "Step 4/7" --msgbox "dnscrypt-proxy installed and locked to Mullvad DoH (server_names = ['mullvad-doh'])." 10 74
 
 # ========== 5) Blocklist ==========
 cat > "$APP_DIR/update_blacklist.sh" <<'EOF'
@@ -187,10 +187,10 @@ systemctl is-active --quiet dnsmasq && systemctl reload dnsmasq || true
 EOF
 chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
-whiptail --title "Step 5/8" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
+whiptail --title "Step 5/7" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
 
 # ========== 6) (Optional) Tunneld release ==========
-if whiptail --title "Step 7/8: Tunneld Release" --yesno "Download and install a Tunneld release now?" 10 60; then
+if whiptail --title "Step 7/7: Tunneld Release" --yesno "Download and install a Tunneld release now?" 10 60; then
   uname_arch=$(uname -m)
   case "$uname_arch" in
     x86_64) rel_arch="amd64" ;;
