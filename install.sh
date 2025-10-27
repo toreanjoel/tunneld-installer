@@ -46,7 +46,7 @@ whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZ
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
 # Zrok and OpenZiti
-curl -fsSL https://get.openziti.io/install.bash | bash -s -- zrok --yes
+curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok
 
 # Remove distro dnscrypt to avoid path/service clashes
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
