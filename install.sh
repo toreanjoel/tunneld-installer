@@ -107,8 +107,6 @@ server=127.0.0.1#5335
 conf-file=$BLACKLIST_DIR/dnsmasq-system.blacklist
 address=/tunneld.lan/$GATEWAY
 address=/gateway.tunneld.lan/$GATEWAY
-log-queries
-log-facility=$LOG_DIR/dnsmasq.log
 EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 whiptail --title "Step 3/8" --msgbox "dnsmasq configured to forward (5336 → 127.0.0.1:5335)." 9 70
