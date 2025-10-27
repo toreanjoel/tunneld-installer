@@ -42,7 +42,7 @@ This wizard will:
 Press OK to begin." 20 74
 
 # ========== 1) Dependencies ==========
-whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip." 10 74
+whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip." 10 74
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
 # Zrok and OpenZiti
