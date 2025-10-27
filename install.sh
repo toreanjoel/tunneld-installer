@@ -4,6 +4,22 @@ set -euo pipefail
 if [ "$EUID" -ne 0 ]; then echo "Run as root (sudo)"; exit 1; fi
 if ! command -v apt-get >/dev/null 2>&1; then echo "Debian-based OS required"; exit 1; fi
 
+# --- INTRO ---
+
+whiptail --title "Welcome to Tunneld Installer" --msgbox \
+"Tunneld is a portable, wireless-first programmable gateway for self-hosters, developers, and edge network builders.
+
+It provides:
+ • Secure service exposure via OpenZiti (Zrok)
+ • DNS/DHCP management (dnsmasq + dhcpcd)
+ • Encrypted DNS (dnscrypt-proxy, Mullvad)
+ • Tracker/ad blocking (Hagezi blocklist)
+
+This script will guide you through installation and configuration.
+Press OK to begin." 20 70
+
+# --- MAIN SETUP ---
+
 APP_DIR="/opt/tunneld"
 CONFIG_DIR="/etc/tunneld"
 LOG_DIR="/var/log/tunneld"
@@ -15,7 +31,6 @@ DEVICE_ID=$(cat /proc/sys/kernel/random/uuid)
 
 mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR" "$DNSCRYPT_DIR"
 
-# Select interfaces
 interfaces=( $(ip -o link show | awk -F': ' '{print $2}' | grep -v '^lo$') )
 if [ ${#interfaces[@]} -eq 0 ]; then echo "No interfaces found"; exit 1; fi
 
@@ -28,13 +43,11 @@ gateway=$(whiptail --title "Gateway IP" --inputbox "Gateway IP (e.g. 10.0.0.1)" 
 dhcp_start=$(whiptail --title "DHCP Start" --inputbox "DHCP start (e.g. 10.0.0.2)" 10 60 "10.0.0.2" 3>&1 1>&2 2>&3) || exit 1
 dhcp_end=$(whiptail --title "DHCP End" --inputbox "DHCP end (e.g. 10.0.0.100)" 10 60 "10.0.0.100" 3>&1 1>&2 2>&3) || exit 1
 
-# Optional: install deps
 if whiptail --title "Dependencies" --yesno "Install dnsmasq, dhcpcd5, dnscrypt-proxy, iptables, curl, unzip?" 10 60; then
   apt-get update
   apt-get install -y dnsmasq dhcpcd5 dnscrypt-proxy iptables curl unzip
 fi
 
-# Detect arch (for release asset name)
 uname_arch=$(uname -m)
 case "$uname_arch" in
   x86_64) rel_arch="amd64" ;;
@@ -44,7 +57,6 @@ case "$uname_arch" in
   *) whiptail --title "Unsupported Arch" --msgbox "Unsupported arch: $uname_arch" 10 60; exit 1 ;;
 esac
 
-# Download release (optional)
 if whiptail --title "Download Tunneld" --yesno "Download and install a Tunneld release?" 10 60; then
   ver_input=$(whiptail --title "Version" --inputbox "Enter version (e.g. 0.4.0) or leave empty for latest" 10 60 "" 3>&1 1>&2 2>&3) || exit 1
   tmpdir=$(mktemp -d)
@@ -55,19 +67,15 @@ if whiptail --title "Download Tunneld" --yesno "Download and install a Tunneld r
   fi
   echo "Fetching $url"
   curl -fL "$url" -o "$tmpdir/tunneld.tar.gz"
-
-  # Extract Elixir release tarball directly into /opt/tunneld
   tar -xzf "$tmpdir/tunneld.tar.gz" -C "$APP_DIR"
   rm -rf "$tmpdir"
 else
-  whiptail --title "Manual Placement" --msgbox "Place your built release contents in $APP_DIR (it must contain bin/, erts-*/, lib/, releases/)" 10 70
+  whiptail --title "Manual Placement" --msgbox "Place your built release in $APP_DIR (must contain bin/, erts-*/, lib/, releases/)" 10 70
 fi
 
-# Seed data files if missing
 [ -f "$DATA_DIR/auth.json" ] || echo '{}' > "$DATA_DIR/auth.json"
 [ -f "$DATA_DIR/shares.json" ] || echo '[]' > "$DATA_DIR/shares.json"
 
-# Persist chosen interfaces/config for reference
 cat > "$CONFIG_DIR/interfaces.conf" <<EOF
 UPSTREAM_INTERFACE=$up_iface
 DOWNSTREAM_INTERFACE=$down_iface
@@ -77,7 +85,6 @@ DHCP_END=$dhcp_end
 DEVICE_ID=$DEVICE_ID
 EOF
 
-# dhcpcd
 cat > "$CONFIG_DIR/dhcpcd.conf" <<EOF
 interface $down_iface
 static ip_address=${gateway}/24
@@ -90,7 +97,6 @@ metric 100
 EOF
 ln -sf "$CONFIG_DIR/dhcpcd.conf" /etc/dhcpcd.conf
 
-# dnsmasq
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
 domain=tunneld.lan
 local=/tunneld.lan/
@@ -113,7 +119,6 @@ log-facility=$LOG_DIR/dnsmasq.log
 EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 
-# dnscrypt-proxy
 cat > "$DNSCRYPT_DIR/dnscrypt-proxy.toml" <<'EOF'
 listen_addresses = ['127.0.0.1:5335']
 max_clients = 250
@@ -131,7 +136,6 @@ ExecStart=
 ExecStart=/usr/bin/dnscrypt-proxy -config $DNSCRYPT_DIR/dnscrypt-proxy.toml
 EOF
 
-# blacklist updater
 cat > "$APP_DIR/update_blacklist.sh" <<EOF
 #!/bin/bash
 set -euo pipefail
@@ -142,7 +146,6 @@ systemctl is-active --quiet dnsmasq && systemctl reload dnsmasq || true
 EOF
 chmod +x "$APP_DIR/update_blacklist.sh"
 
-# systemd service (Elixir release)
 SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
 [Unit]
@@ -174,28 +177,38 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-# enable IP forwarding
 sysctl -w net.ipv4.ip_forward=1
 grep -q '^net.ipv4.ip_forward=1' /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
 
-# enable + start
 systemctl daemon-reload
 systemctl enable dhcpcd dnsmasq dnscrypt-proxy
 systemctl restart dhcpcd dnsmasq dnscrypt-proxy
 systemctl enable tunneld
 systemctl restart tunneld
 
-echo "Installed:
-- App:    $APP_DIR
-- Config: $CONFIG_DIR
-- Logs:   $LOG_DIR
-- Data:   $DATA_DIR
+# --- OUTRO ---
 
-Interfaces:
-- Upstream:   $up_iface
-- Downstream: $down_iface
-Gateway: $gateway
+whiptail --title "Installation Complete" --msgbox \
+"Tunneld installation completed successfully.
 
-Check:   systemctl status tunneld
-Open:    http://$gateway
-"
+App:    $APP_DIR
+Config: $CONFIG_DIR
+Logs:   $LOG_DIR
+Data:   $DATA_DIR
+
+Access:
+ • http://$gateway
+ • http://tunneld.lan
+ • http://gateway.tunneld.lan
+
+You can manage the service with:
+  systemctl status tunneld
+  systemctl restart tunneld
+
+Thank you for using Tunneld!
+If you find this project helpful:
+ • ⭐ Star it on GitHub: github.com/toreanjoel/tunneld
+ • 🐛 Report bugs or feedback
+ • 📣 Share it with others
+
+Keep building, stay private." 25 78
