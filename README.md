@@ -89,7 +89,6 @@ The uninstaller will:
 /etc/tunneld/              # Configuration files
 /var/log/tunneld/          # Log files
 /var/lib/tunneld/          # Persistent data
-/usr/local/bin/tunneld     # CLI tool
 ```
 
 ## Configuration Files
