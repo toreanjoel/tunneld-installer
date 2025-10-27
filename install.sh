@@ -46,7 +46,7 @@ whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZ
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
 # Zrok and OpenZiti
-curl -sSf https://get.openziti.io/install.bash | bash -s -y zrok
+curl -fsSL https://get.openziti.io/install.bash | bash -s -- zrok --yes
 
 # Remove distro dnscrypt to avoid path/service clashes
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
@@ -281,5 +281,9 @@ Access:
 Manage:
   systemctl status dnscrypt-proxy dnsmasq dhcpcd tunneld
   $APP_DIR/update_blacklist.sh
+
+OpenZiti/Zrok:
+  To expose services, connect to your device to Tunneld OpenZiti controller through the dashboard to get started.
+  Aim to use the self-host guide: https://docs.zrok.io/docs/category/self-hosting/ to get started with your own in time.
 
 Done." 24 80
