@@ -190,18 +190,7 @@ chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
 whiptail --title "Step 5/8" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
 
-# ========== 6) IP forwarding + NAT ==========
-sysctl -w net.ipv4.ip_forward=1 >/dev/null
-grep -q '^net.ipv4.ip_forward=1' /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
-
-iptables -t nat -C POSTROUTING -o "$UP_IFACE" -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -o "$UP_IFACE" -j MASQUERADE
-iptables -C FORWARD -i "$DOWN_IFACE" -o "$UP_IFACE" -j ACCEPT 2>/dev/null || iptables -A FORWARD -i "$DOWN_IFACE" -o "$UP_IFACE" -j ACCEPT
-iptables -C FORWARD -i "$UP_IFACE" -o "$DOWN_IFACE" -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || iptables -A FORWARD -i "$UP_IFACE" -o "$DOWN_IFACE" -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-iptables-save > /etc/iptables/rules.v4
-whiptail --title "Step 6/8" --msgbox "IP forwarding enabled and NAT rules saved." 8 60
-
-# ========== 7) (Optional) Tunneld release ==========
+# ========== 6) (Optional) Tunneld release ==========
 if whiptail --title "Step 7/8: Tunneld Release" --yesno "Download and install a Tunneld release now?" 10 60; then
   uname_arch=$(uname -m)
   case "$uname_arch" in
@@ -226,7 +215,7 @@ else
   whiptail --msgbox "Skipping download. Ensure a valid release exists in $APP_DIR (bin/, erts-*/, lib/, releases/)." 10 70
 fi
 
-# ========== 8) Enable & start services ==========
+# ========== 7) Enable & start services ==========
 [ -f "$DATA_DIR/auth.json" ] || echo '{}' > "$DATA_DIR/auth.json"
 [ -f "$DATA_DIR/shares.json" ] || echo '[]' > "$DATA_DIR/shares.json"
 
