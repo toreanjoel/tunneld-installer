@@ -36,16 +36,15 @@ This wizard will:
   3) Configure dnsmasq
   4) Install & configure dnscrypt-proxy (Mullvad only)
   5) Fetch blocklist
-  6) Enable IP forwarding + NAT
-  7) (Optional) Download a Tunneld release
-  8) Enable & start services
+  6) (Optional) Download a Tunneld release
+  7) Enable & start services
 
 Press OK to begin." 20 74
 
 # ========== 1) Dependencies ==========
 whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: curl, ca-certificates, iptables, iptables-persistent, dnsmasq, dhcpcd5, unzip, whiptail." 10 74
 apt-get update
-apt-get install -y curl ca-certificates iptables iptables-persistent dnsmasq dhcpcd5 unzip whiptail
+apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
 
 # Remove distro dnscrypt to avoid path/service clashes
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
