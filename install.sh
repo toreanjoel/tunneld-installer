@@ -45,6 +45,8 @@ Press OK to begin." 20 74
 whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip." 10 74
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
+# Zrok and OpenZiti
+curl -sSf https://get.openziti.io/install.bash | bash -s -y zrok
 
 # Remove distro dnscrypt to avoid path/service clashes
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
