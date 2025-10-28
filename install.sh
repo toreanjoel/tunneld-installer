@@ -94,10 +94,8 @@ whiptail --title "Step 2/7" --msgbox "Network settings saved:\nUP: $UP_IFACE\nDO
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
 domain=tunneld.lan
 local=/tunneld.lan/
-expand-hosts
 port=5336
 interface=$DOWN_IFACE
-bind-interfaces
 dhcp-range=${DHCP_START},${DHCP_END},255.255.255.0,infinite
 dhcp-option=option:router,$GATEWAY
 dhcp-option=option:dns-server,$GATEWAY
