@@ -1,9 +1,9 @@
 # Tunneld Installer
 
-> **⚠️ Tunneld is in active development (Beta Phase).**
+> **⚠️ Tunneld is in active development (pre-alpha Phase).**
 >
 > Pre-release ARM builds are distributed for testing.
-> Only one "beta" build is published at a time.
+> Only one "pre-alpha" build is published at a time.
 > The source code and tagged public releases will become available once the project is open sourced.
 > For early access and feedback, contact @toreanjoel.
 
@@ -23,7 +23,7 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
-Update to the newest beta build later (without reinstalling full networking):
+Update to the newest pre-alpha build later (without reinstalling full networking):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/update.sh -o update.sh
@@ -41,13 +41,13 @@ sudo ./uninstall.sh
 
 ---
 
-## Beta Builds and Integrity
+## pre-alpha Builds and Integrity
 
-During the beta phase:
+During the pre-alpha phase:
 
 - The installer and updater pull a single ARM64 tarball from this repo:
 
-  - `releases/tunneld-beta-linux-arm64.tar.gz`
+  - `releases/tunneld-pre-alpha-linux-arm64.tar.gz`
 
 - A matching checksum file is published alongside it:
 
@@ -55,13 +55,13 @@ During the beta phase:
 
 The installer and updater will:
 
-1. Download the beta tarball
+1. Download the pre-alpha tarball
 2. Download the checksum file
 3. Show (and try to verify) the expected SHA256
 4. Extract the binary into `/opt/tunneld`
 
-There is intentionally only one active beta build in `releases/` at a time.
-When a new beta is published, it replaces the previous one.
+There is intentionally only one active pre-alpha build in `releases/` at a time.
+When a new pre-alpha is published, it replaces the previous one.
 
 When the project goes open source, this will switch to versioned, tagged releases (for example `v1.0.0`, `v1.1.0`) hosted in the main Tunneld repository. At that point, both install and update will pull those signed/tagged releases.
 
@@ -127,7 +127,7 @@ Also removes any distro-provided `dnscrypt-proxy` to avoid conflicts and replace
 
 ### 4) Deploys and Enables Tunneld
 
-- Optionally downloads the current Tunneld beta build for ARM64 from this repo’s `releases/` directory.
+- Optionally downloads the current Tunneld pre-alpha build for ARM64 from this repo’s `releases/` directory.
 - Shows and attempts to verify checksum.
 - Extracts into `/opt/tunneld`.
 - Writes and enables a `tunneld.service` systemd unit.
@@ -165,7 +165,7 @@ After this, the dashboard should be reachable.
 
 ---
 
-## Updating Tunneld (beta builds)
+## Updating Tunneld (pre-alpha builds)
 
 To update just the Tunneld application binary without redoing network setup:
 
@@ -178,14 +178,14 @@ sudo ./update.sh
 What `update.sh` does:
 
 1. Stops the `tunneld` service.
-2. Downloads the current beta tarball (`tunneld-beta-linux-arm64.tar.gz`) and the published `checksums.txt`.
+2. Downloads the current pre-alpha tarball (`tunneld-pre-alpha-linux-arm64.tar.gz`) and the published `checksums.txt`.
 3. Shows and attempts to verify the checksum.
 4. Extracts the new build into `/opt/tunneld`.
 5. Restarts `tunneld`.
 
 Your DHCP/DNS settings and network config are not touched.
 
-When Tunneld transitions from beta to open source, `update.sh` will be updated to fetch signed, tagged releases from the main Tunneld repo instead of the single rotating beta build.
+When Tunneld transitions from pre-alpha to open source, `update.sh` will be updated to fetch signed, tagged releases from the main Tunneld repo instead of the single rotating pre-alpha build.
 
 ---
 
