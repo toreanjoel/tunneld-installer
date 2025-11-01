@@ -7,7 +7,7 @@ need_root() { [ "$EUID" -eq 0 ] || { echo "Run as root (sudo)"; exit 1; }; }
 need_debian() { command -v apt-get >/dev/null 2>&1 || { echo "Debian-based OS required"; exit 1; }; }
 need_root; need_debian
 
-# ---- Paths ----
+# Paths
 APP_DIR="/opt/tunneld"
 CONFIG_DIR="/etc/tunneld"
 LOG_DIR="/var/log/tunneld"
@@ -17,7 +17,7 @@ BLACKLIST_DIR="$CONFIG_DIR/blacklists"
 DNSCRYPT_DIR="$CONFIG_DIR/dnscrypt"
 mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR" "$DNSCRYPT_DIR"
 
-# ---- State (persist across reruns) ----
+# State (persist across reruns)
 UP_IFACE="${UP_IFACE:-}"
 DOWN_IFACE="${DOWN_IFACE:-}"
 GATEWAY="${GATEWAY:-10.0.0.1}"
@@ -26,7 +26,7 @@ DHCP_END="${DHCP_END:-10.0.0.100}"
 DEVICE_ID="${DEVICE_ID:-$(cat /proc/sys/kernel/random/uuid)}"
 TUNNELD_VERSION="${TUNNELD_VERSION:-}"
 
-# ---- Intro ----
+# Intro
 whiptail --title "Tunneld Installer" --msgbox \
 "Tunneld is a portable, wireless-first programmable gateway.
 
@@ -41,7 +41,7 @@ This wizard will:
 
 Press OK to begin." 20 74
 
-# ========== 1) Dependencies ==========
+# 1) Dependencies
 whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip." 10 74
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip -y
@@ -55,7 +55,7 @@ if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
   apt-get purge -y dnscrypt-proxy || true
 fi
 
-# ========== 2) Network (UP/DOWN, DHCP) ==========
+# 2) Network (UP/DOWN, DHCP)
 mapfile -t ifaces < <(ip -o link show | awk -F': ' '{print $2}' | grep -vE '^(lo|docker|br-|veth|zt|tun|wg)')
 if [ ${#ifaces[@]} -eq 0 ]; then whiptail --msgbox "No interfaces found." 8 50; exit 1; fi
 
@@ -90,27 +90,21 @@ EOF
 ln -sf "$CONFIG_DIR/dhcpcd.conf" /etc/dhcpcd.conf
 whiptail --title "Step 2/7" --msgbox "Network settings saved:\nUP: $UP_IFACE\nDOWN: $DOWN_IFACE\nGATEWAY: $GATEWAY\nDHCP: $DHCP_START → $DHCP_END" 12 60
 
-# ========== 3) dnsmasq ==========
+# 3) dnsmasq
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
-domain=tunneld.lan
-local=/tunneld.lan/
 port=5336
 interface=$DOWN_IFACE
 dhcp-range=${DHCP_START},${DHCP_END},255.255.255.0,infinite
 dhcp-option=option:router,$GATEWAY
 dhcp-option=option:dns-server,$GATEWAY
-dhcp-option=15,tunneld.lan
-dhcp-option=119,tunneld.lan
 no-resolv
 server=127.0.0.1#5335
 conf-file=$BLACKLIST_DIR/dnsmasq-system.blacklist
-address=/tunneld.lan/$GATEWAY
-address=/gateway.tunneld.lan/$GATEWAY
 EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 whiptail --title "Step 3/7" --msgbox "dnsmasq configured to forward (5336 → 127.0.0.1:5335)." 9 70
 
-# ========== 4) dnscrypt-proxy (Mullvad only) ==========
+# 4) dnscrypt-proxy (Mullvad only)
 DNSCRYPT_VERSION="2.1.5"
 uname_arch=$(uname -m)
 case "$uname_arch" in
@@ -174,7 +168,7 @@ EOF
 
 whiptail --title "Step 4/7" --msgbox "dnscrypt-proxy installed and locked to Mullvad DoH (server_names = ['mullvad-doh'])." 10 74
 
-# ========== 5) Blocklist ==========
+# 5) Blocklist
 cat > "$APP_DIR/update_blacklist.sh" <<'EOF'
 #!/bin/bash
 set -euo pipefail
@@ -189,7 +183,7 @@ chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
 whiptail --title "Step 5/7" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
 
-# ========== 6) (Optional) Tunneld release ==========
+# 6) (Optional) Tunneld release
 if whiptail --title "Step 7/7: Tunneld Release" --yesno "Download and install a Tunneld release now?" 10 60; then
   uname_arch=$(uname -m)
   case "$uname_arch" in
@@ -214,7 +208,7 @@ else
   whiptail --msgbox "Skipping download. Ensure a valid release exists in $APP_DIR (bin/, erts-*/, lib/, releases/)." 10 70
 fi
 
-# ========== 7) Enable & start services ==========
+# 7) Enable & start services
 [ -f "$DATA_DIR/auth.json" ] || echo '{}' > "$DATA_DIR/auth.json"
 [ -f "$DATA_DIR/shares.json" ] || echo '[]' > "$DATA_DIR/shares.json"
 
@@ -256,7 +250,7 @@ systemctl restart dnscrypt-proxy
 systemctl restart dnsmasq
 systemctl restart tunneld
 
-# ---- Outro ----
+# Outro
 whiptail --title "Installation Complete" --msgbox \
 "Tunneld installation complete.
 
@@ -266,11 +260,9 @@ Data:   $DATA_DIR
 
 Access:
   http://$GATEWAY
-  http://tunneld.lan
 
-Manage:
+Verify services running:
   systemctl status dnscrypt-proxy dnsmasq dhcpcd tunneld
-  $APP_DIR/update_blacklist.sh
 
 OpenZiti/Zrok:
   To expose services, connect to your device to Tunneld OpenZiti controller through the dashboard to get started.
