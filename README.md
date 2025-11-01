@@ -1,10 +1,11 @@
 # Tunneld Installer
 
-> **⚠️ Tunneld is currently in active development.**
+> **⚠️ Tunneld is in active development (Beta Phase).**
 >
-> The binary release will be made available on the [Tunneld repository](https://github.com/toreanjoel/tunneld) once the project is open-sourced.
->
-> For early access to test builds or to participate in pre-release evaluations, please contact [Torean Joel](https://github.com/toreanjoel) directly.
+> Pre-release ARM builds are distributed for testing.
+> Only one "beta" build is published at a time.
+> The source code and tagged public releases will become available once the project is open sourced.
+> For early access and feedback, contact @toreanjoel.
 
 ---
 
@@ -22,13 +23,47 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
-To uninstall:
+Update to the newest beta build later (without reinstalling full networking):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/update.sh -o update.sh
+chmod +x update.sh
+sudo ./update.sh
+```
+
+Uninstall:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/uninstall.sh -o uninstall.sh
 chmod +x uninstall.sh
 sudo ./uninstall.sh
 ```
+
+---
+
+## Beta Builds and Integrity
+
+During the beta phase:
+
+- The installer and updater pull a single ARM64 tarball from this repo:
+
+  - `releases/tunneld-beta-linux-arm64.tar.gz`
+
+- A matching checksum file is published alongside it:
+
+  - `releases/checksums.txt`
+
+The installer and updater will:
+
+1. Download the beta tarball
+2. Download the checksum file
+3. Show (and try to verify) the expected SHA256
+4. Extract the binary into `/opt/tunneld`
+
+There is intentionally only one active beta build in `releases/` at a time.
+When a new beta is published, it replaces the previous one.
+
+When the project goes open source, this will switch to versioned, tagged releases (for example `v1.0.0`, `v1.1.0`) hosted in the main Tunneld repository. At that point, both install and update will pull those signed/tagged releases.
 
 ---
 
@@ -42,14 +77,15 @@ Tunneld is a self-hosted network gateway that provides:
 
 - **Built-in Network Services**:
 
-  - DHCP and DNS management (Isolated Network Gateway)
-  - DNS Encryption via dnscrypt-proxy ([Mullvad](https://mullvad.net/))
-  - Tracker and ad blocking with blacklist enforcement ([Default Block List](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/dnsmasq/pro.txt))
+  - DHCP and DNS management (isolated gateway network)
+  - DNS encryption via dnscrypt-proxy ([Mullvad](https://mullvad.net/))
+  - Tracker and ad blocking with blacklist enforcement
+    ([Default Block List](https://raw.githubusercontent.com/hagezi/dns-blocklists/main/dnsmasq/pro.txt))
     [Support the creator](https://github.com/hagezi/dns-blocklists)
 
 - **Privacy-First** – No reliance on third-party platforms, full control over your infrastructure.
 
-Perfect for developers, home-lab enthusiasts, and anyone wanting to self-host without exposing their home network directly to the internet.
+This is useful for developers, home-lab builders, and anyone who wants portable, policy-controlled network access without exposing their main network directly.
 
 ---
 
@@ -62,7 +98,7 @@ The `install.sh` script performs a complete, guided setup:
 - Detects available network interfaces.
 - Prompts for:
 
-  - Upstream (WAN/Wi-Fi) and downstream (LAN/Ethernet) interfaces.
+  - Upstream (WAN/Wi-Fi) and downstream (LAN/AP) interfaces.
   - Gateway IP (default: `10.0.0.1`).
   - DHCP range (default: `10.0.0.2–10.0.0.100`).
 
@@ -72,64 +108,43 @@ Installs:
 
 - `dnsmasq` (DNS/DHCP server)
 - `dhcpcd` (network configuration)
-- `dnscrypt-proxy` (encrypted DNS)
-- `iptables`, `bc`, `unzip`, and build dependencies
+- `dnscrypt-proxy` (encrypted DNS using Mullvad DoH)
+- `iptables`, `bc`, `unzip`, and required build/runtime packages
 - [OpenZiti](https://openziti.io/) and [Zrok](https://zrok.io/)
+
+Also removes any distro-provided `dnscrypt-proxy` to avoid conflicts and replaces it with a configured instance.
 
 ### 3) Configures System Services
 
-- Creates configuration files under `/etc/tunneld/`.
-
-- Links configuration files:
+- Creates configuration under `/etc/tunneld/`.
+- Symlinks:
 
   - `/etc/dhcpcd.conf` → `/etc/tunneld/dhcpcd.conf`
   - `/etc/dnsmasq.conf` → `/etc/tunneld/dnsmasq.conf`
 
 - Enables DHCP, DNS, and encrypted DNS forwarding.
-
-- Fetches and applies the [Hagezi blocklist](https://github.com/hagezi/dns-blocklists).
+- Fetches and wires in the [Hagezi blocklist](https://github.com/hagezi/dns-blocklists) for tracker/ad blocking.
 
 ### 4) Deploys and Enables Tunneld
 
-- Optionally downloads the latest Tunneld release from GitHub.
-
-- Registers systemd services:
+- Optionally downloads the current Tunneld beta build for ARM64 from this repo’s `releases/` directory.
+- Shows and attempts to verify checksum.
+- Extracts into `/opt/tunneld`.
+- Writes and enables a `tunneld.service` systemd unit.
+- Enables and/or restarts:
 
   - `tunneld.service`
   - `dnscrypt-proxy.service`
   - `dnsmasq.service`
   - `dhcpcd.service`
 
-- Starts all services automatically and launches the dashboard.
-
----
-
-## Installation
-
-### Prerequisites
-
-- Debian/Ubuntu-based Linux system (e.g., Raspberry Pi OS, Ubuntu Server)
-- Two network interfaces (one WAN, one LAN)
-- Ensure drivers and firmware for both interfaces are installed
-
-### Quick Start
-
-```bash
-git clone https://github.com/toreanjoel/tunneld-installer
-cd tunneld-installer
-chmod +x install.sh
-sudo ./install.sh
-```
-
-Follow the interactive prompts to complete installation.
+After this, the dashboard should be reachable.
 
 ---
 
 ## After Installation
 
-Once setup completes:
-
-1. **Access the dashboard:**
+1. Access the dashboard:
 
    ```
    http://10.0.0.1
@@ -137,16 +152,40 @@ Once setup completes:
    http://gateway.tunneld.lan
    ```
 
-2. **Verify services:**
+2. Verify services:
 
    ```bash
    systemctl status tunneld dnscrypt-proxy dnsmasq dhcpcd
    ```
 
-3. **Expose services securely:**
+3. Expose services securely:
 
    - Use Zrok to share local services.
-   - To self-host your controller, follow the [Zrok Self-Hosting Guide](https://docs.zrok.io/docs/category/self-hosting/).
+   - To self-host your controller, follow the Zrok self-hosting documentation.
+
+---
+
+## Updating Tunneld (beta builds)
+
+To update just the Tunneld application binary without redoing network setup:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/update.sh -o update.sh
+chmod +x update.sh
+sudo ./update.sh
+```
+
+What `update.sh` does:
+
+1. Stops the `tunneld` service.
+2. Downloads the current beta tarball (`tunneld-beta-linux-arm64.tar.gz`) and the published `checksums.txt`.
+3. Shows and attempts to verify the checksum.
+4. Extracts the new build into `/opt/tunneld`.
+5. Restarts `tunneld`.
+
+Your DHCP/DNS settings and network config are not touched.
+
+When Tunneld transitions from beta to open source, `update.sh` will be updated to fetch signed, tagged releases from the main Tunneld repo instead of the single rotating beta build.
 
 ---
 
@@ -155,15 +194,15 @@ Once setup completes:
 To completely remove Tunneld:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/uninstall.sh -o uninstall.sh
+chmod +x uninstall.sh
 sudo ./uninstall.sh
 ```
 
 The uninstaller will:
 
 1. Stop and disable `tunneld` and `dnscrypt-proxy`.
-
 2. Stop and disable any `zrok-*` services.
-
 3. Remove:
 
    - `/opt/tunneld`
@@ -173,18 +212,15 @@ The uninstaller will:
    - `/var/run/tunneld`
 
 4. Remove `/usr/local/bin/dnscrypt-proxy`.
-
-5. Remove all related systemd units (`tunneld.service`, `dnscrypt-proxy.service`, `zrok-*`).
-
+5. Remove all related systemd units.
 6. Remove `/etc/dnsmasq.conf` and `/etc/dhcpcd.conf` if they are symlinks to Tunneld.
-
 7. Restart `dnsmasq` and `dhcpcd` (best effort).
 
 ---
 
 ## Directory Layout
 
-```
+```text
 /opt/tunneld/              Application binaries and releases
 /etc/tunneld/              Configuration files
 /var/log/tunneld/          Log files
@@ -201,16 +237,17 @@ All configuration files are stored in `/etc/tunneld/`.
 | File                                  | Purpose                         |
 | ------------------------------------- | ------------------------------- |
 | `interfaces.conf`                     | Network interface mappings      |
-| `dhcpcd.conf`                         | Network interface configuration |
+| `dhcpcd.conf`                         | Gateway and interface config    |
 | `dnsmasq.conf`                        | DNS/DHCP configuration          |
-| `dnscrypt/dnscrypt-proxy.toml`        | DNS encryption settings         |
-| `blacklists/dnsmasq-system.blacklist` | Ad and tracker blocking rules   |
+| `dnscrypt/dnscrypt-proxy.toml`        | Encrypted DNS resolver settings |
+| `blacklists/dnsmasq-system.blacklist` | Ad/tracker block rules          |
 
 ---
 
 ## Support the Project and Its Creators
 
-Tunneld integrates with several incredible open-source tools and services. If you find this project useful, please consider supporting the creators who make it possible:
+Tunneld builds on and integrates with several open-source projects.
+If you find this useful, please consider supporting the creators:
 
 - [Tunneld Project](https://github.com/toreanjoel/tunneld)
 - [OpenZiti / NetFoundry](https://netfoundry.io/)
@@ -219,11 +256,4 @@ Tunneld integrates with several incredible open-source tools and services. If yo
 - [dnscrypt-proxy](https://github.com/DNSCrypt/dnscrypt-proxy)
 - [Mullvad](https://mullvad.net/)
 
-Each plays a crucial role in providing the privacy, performance, and flexibility that Tunneld builds upon.
-
----
-
-Tunneld is free and open-source.
-
-- Star the project on GitHub: [github.com/toreanjoel/tunneld](https://github.com/toreanjoel/tunneld)
-- Share it with your community and support the open-source ecosystem.
+Each of these plays a role in privacy, routing, DNS security, or controlled access.

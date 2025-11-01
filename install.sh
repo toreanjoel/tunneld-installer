@@ -183,29 +183,64 @@ chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
 whiptail --title "Step 5/7" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
 
-# 6) (Optional) Tunneld release
-if whiptail --title "Step 7/7: Tunneld Release" --yesno "Download and install a Tunneld release now?" 10 60; then
-  uname_arch=$(uname -m)
-  case "$uname_arch" in
-    x86_64) rel_arch="amd64" ;;
-    aarch64|arm64) rel_arch="arm64" ;;
-    armv7l|armhf) rel_arch="armv7" ;;
-    armv6l) rel_arch="armv6" ;;
-    *) whiptail --msgbox "Unsupported arch: $uname_arch" 8 50; exit 1;;
-  esac
-  TUNNELD_VERSION=$(whiptail --inputbox "Enter version (e.g. 0.4.0) or leave empty for latest" 10 60 "$TUNNELD_VERSION" 3>&1 1>&2 2>&3) || true
+# 6) (Optional) Tunneld beta release (ARM64 only)
+if whiptail --title "Step 6/7: Tunneld Beta Release" --yesno \
+"Download and install the current Tunneld beta build now?
+
+This is pre-release software intended for testing.
+Config and networking will be managed by this box.
+" 14 70; then
+
   tmpdir=$(mktemp -d)
-  if [ -n "${TUNNELD_VERSION:-}" ]; then
-    url="https://github.com/toreanjoel/tunneld/releases/download/v${TUNNELD_VERSION}/tunneld-${TUNNELD_VERSION}-linux-${rel_arch}.tar.gz"
+  beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/releases/tunneld-beta-linux-arm64.tar.gz"
+  sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/releases/checksums.txt"
+
+  whiptail --title "Tunneld Beta" --msgbox "Fetching beta binary for ARM64..." 8 50
+
+  curl -fL "$beta_url" -o "$tmpdir/tunneld-beta.tar.gz"
+  curl -fsSL "$sums_url" -o "$tmpdir/checksums.txt" || true
+
+  echo "Expected checksum for tunneld-beta-linux-arm64.tar.gz:"
+  grep "tunneld-beta-linux-arm64.tar.gz" "$tmpdir/checksums.txt" || echo "No checksum found."
+
+  # Attempt checksum verify if sha256sum and entry exist
+  if grep -q "tunneld-beta-linux-arm64.tar.gz" "$tmpdir/checksums.txt" 2>/dev/null; then
+    (
+      cd "$tmpdir"
+      if sha256sum --status -c checksums.txt 2>/dev/null; then
+        echo "Checksum verified."
+      else
+        echo "WARNING: checksum did not verify. Proceeding anyway."
+      fi
+    )
   else
-    url="https://github.com/toreanjoel/tunneld/releases/latest/download/tunneld-linux-${rel_arch}.tar.gz"
+    echo "Skipping checksum verification."
   fi
-  curl -fL "$url" -o "$tmpdir/tunneld.tar.gz"
-  tar -xzf "$tmpdir/tunneld.tar.gz" -C "$APP_DIR"
+
+  # Extract into /opt/tunneld
+  tar -xzf "$tmpdir/tunneld-beta.tar.gz" -C "$APP_DIR"
+
   rm -rf "$tmpdir"
-  whiptail --msgbox "Tunneld files placed in $APP_DIR" 8 50
+
+  whiptail --msgbox \
+"Tunneld beta files placed in:
+  $APP_DIR
+
+This is an unsigned beta build, not a final tagged release.
+" 14 70
 else
-  whiptail --msgbox "Skipping download. Ensure a valid release exists in $APP_DIR (bin/, erts-*/, lib/, releases/)." 10 70
+  whiptail --msgbox \
+"Skipping Tunneld download.
+
+Make sure a valid Tunneld release exists in:
+  $APP_DIR
+
+Expected structure:
+  bin/
+  erts-*/
+  lib/
+  releases/
+" 16 70
 fi
 
 # 7) Enable & start services
