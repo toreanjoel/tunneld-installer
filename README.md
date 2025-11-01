@@ -7,6 +7,10 @@
 > The source code and tagged public releases will become available once the project is open sourced.
 > For early access and feedback, contact @toreanjoel.
 
+<div align="center">
+   <img src="assets/installer.png" alt="Tunneld Logo" width="600">
+</div>
+
 ---
 
 Official installer script for [Tunneld](https://github.com/toreanjoel/tunneld) — a portable, wireless-first programmable gateway for self-hosters, developers, and edge network builders.
