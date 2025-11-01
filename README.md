@@ -18,7 +18,7 @@ Official installer script for [Tunneld](https://github.com/toreanjoel/tunneld) â
 Install Tunneld directly without cloning the repository:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/install.sh -o install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -26,7 +26,7 @@ sudo ./install.sh
 Update to the newest beta build later (without reinstalling full networking):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/update.sh -o update.sh
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/update.sh -o update.sh
 chmod +x update.sh
 sudo ./update.sh
 ```
@@ -34,7 +34,7 @@ sudo ./update.sh
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/uninstall.sh -o uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/uninstall.sh -o uninstall.sh
 chmod +x uninstall.sh
 sudo ./uninstall.sh
 ```
