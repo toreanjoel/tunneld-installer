@@ -245,9 +245,6 @@ Expected structure:
 fi
 
 # 7) Enable & start services
-[ -f "$DATA_DIR/auth.json" ] || echo '{}' > "$DATA_DIR/auth.json"
-[ -f "$DATA_DIR/shares.json" ] || echo '[]' > "$DATA_DIR/shares.json"
-
 SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
 [Unit]
