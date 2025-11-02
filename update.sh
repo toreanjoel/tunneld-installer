@@ -10,8 +10,8 @@ APP_DIR="/opt/tunneld"
 SERVICE_NAME="tunneld"
 TMPDIR="$(mktemp -d)"
 
-BETA_URL="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/releases/tunneld-beta-linux-arm64.tar.gz"
-SUMS_URL="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/releases/checksums.txt"
+BETA_URL="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
+SUMS_URL="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
 BETA_FILE="$TMPDIR/tunneld-beta.tar.gz"
 SUMS_FILE="$TMPDIR/checksums.txt"
 
