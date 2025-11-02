@@ -7,7 +7,6 @@ need_root() { [ "$EUID" -eq 0 ] || { echo "Run as root (sudo)"; exit 1; }; }
 need_debian() { command -v apt-get >/dev/null 2>&1 || { echo "Debian-based OS required"; exit 1; }; }
 need_root; need_debian
 
-# Paths
 APP_DIR="/opt/tunneld"
 CONFIG_DIR="/etc/tunneld"
 LOG_DIR="/var/log/tunneld"
@@ -17,7 +16,6 @@ BLACKLIST_DIR="$CONFIG_DIR/blacklists"
 DNSCRYPT_DIR="$CONFIG_DIR/dnscrypt"
 mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR" "$DNSCRYPT_DIR"
 
-# State (persist across reruns)
 UP_IFACE="${UP_IFACE:-}"
 DOWN_IFACE="${DOWN_IFACE:-}"
 GATEWAY="${GATEWAY:-10.0.0.1}"
@@ -26,7 +24,6 @@ DHCP_END="${DHCP_END:-10.0.0.100}"
 DEVICE_ID="${DEVICE_ID:-$(cat /proc/sys/kernel/random/uuid)}"
 TUNNELD_VERSION="${TUNNELD_VERSION:-}"
 
-# Intro
 whiptail --title "Tunneld Installer" --msgbox \
 "Tunneld is a portable, wireless-first programmable gateway.
 
@@ -41,21 +38,17 @@ This wizard will:
 
 Press OK to begin." 20 74
 
-# 1) Dependencies
 whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip, iw" 10 74
 apt-get update
 apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip iw -y
-# Zrok and OpenZiti
 curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok
 
-# Remove distro dnscrypt to avoid path/service clashes
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
   systemctl stop dnscrypt-proxy || true
   systemctl disable dnscrypt-proxy || true
   apt-get purge -y dnscrypt-proxy || true
 fi
 
-# 2) Network (UP/DOWN, DHCP)
 mapfile -t ifaces < <(ip -o link show | awk -F': ' '{print $2}' | grep -vE '^(lo|docker|br-|veth|zt|tun|wg)')
 if [ ${#ifaces[@]} -eq 0 ]; then whiptail --msgbox "No interfaces found." 8 50; exit 1; fi
 
@@ -91,7 +84,6 @@ EOF
 ln -sf "$CONFIG_DIR/dhcpcd.conf" /etc/dhcpcd.conf
 whiptail --title "Step 2/7" --msgbox "Network settings saved:\nUP: $UP_IFACE\nDOWN: $DOWN_IFACE\nGATEWAY: $GATEWAY\nDHCP: $DHCP_START → $DHCP_END" 12 60
 
-# 3) dnsmasq
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
 port=5336
 interface=$DOWN_IFACE
@@ -105,7 +97,6 @@ EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 whiptail --title "Step 3/7" --msgbox "dnsmasq configured to forward (5336 → 127.0.0.1:5335)." 9 70
 
-# 4) dnscrypt-proxy (Mullvad only)
 DNSCRYPT_VERSION="2.1.5"
 uname_arch=$(uname -m)
 case "$uname_arch" in
@@ -127,12 +118,12 @@ install -m 755 dnscrypt-proxy /usr/local/bin/dnscrypt-proxy
 
 if [ ! -f "$DNSCRYPT_DIR/dnscrypt-proxy.toml" ]; then
   sed \
-    -e "s|^#\?listen_addresses = .*|listen_addresses = ['127.0.0.1:5335']|g" \
+    -e "s|^#\?listen_addresses = .*|listen_addresses = ['127.0.0.1:53', '127.0.0.1:5335']|g" \
     -e "s|^#\?max_clients = .*|max_clients = 250|g" \
     -e "s|^#\?server_names = .*|server_names = ['mullvad-doh']|g" \
     example-dnscrypt-proxy.toml > "$DNSCRYPT_DIR/dnscrypt-proxy.toml" || cp example-dnscrypt-proxy.toml "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
 else
-  sed -i "s|^#\?listen_addresses = .*|listen_addresses = ['127.0.0.1:5335']|g" "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
+  sed -i "s|^#\?listen_addresses = .*|listen_addresses = ['127.0.0.1:53', '127.0.0.1:5335']|g" "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
   sed -i "s|^#\?server_names = .*|server_names = ['mullvad-doh']|g" "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
 fi
 
@@ -169,7 +160,6 @@ EOF
 
 whiptail --title "Step 4/7" --msgbox "dnscrypt-proxy installed and locked to Mullvad DoH (server_names = ['mullvad-doh'])." 10 74
 
-# 5) Blocklist
 cat > "$APP_DIR/update_blacklist.sh" <<'EOF'
 #!/bin/bash
 set -euo pipefail
@@ -184,7 +174,6 @@ chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
 whiptail --title "Step 5/7" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
 
-# 6) (Optional) Tunneld beta release (ARM64 only)
 if whiptail --title "Step 6/7: Tunneld Beta Release" --yesno \
 "Download and install the current Tunneld beta build now?
 
@@ -204,7 +193,6 @@ Config and networking will be managed by this box.
   echo "Expected checksum for tunneld-pre-alpha.tar.gz:"
   grep "tunneld-pre-alpha.tar.gz" "$tmpdir/checksums.txt" || echo "No checksum found."
 
-  # Attempt checksum verify if sha256sum and entry exist
   if grep -q "tunneld-pre-alpha.tar.gz" "$tmpdir/checksums.txt" 2>/dev/null; then
     (
       cd "$tmpdir"
@@ -218,7 +206,6 @@ Config and networking will be managed by this box.
     echo "Skipping checksum verification."
   fi
 
-  # Extract into /opt/tunneld
   tar -xzf "$tmpdir/tunneld-beta.tar.gz" -C "$APP_DIR"
 
   rm -rf "$tmpdir"
@@ -243,8 +230,6 @@ Expected structure:
   releases/
 " 16 70
 fi
-
-# 7) Enable & start services
 
 SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
@@ -278,6 +263,10 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
+tee /etc/resolv.conf > /dev/null <<EOF
+nameserver 127.0.0.1
+EOF
+
 systemctl daemon-reload
 systemctl enable dhcpcd dnsmasq dnscrypt-proxy tunneld
 systemctl restart dhcpcd
@@ -285,7 +274,6 @@ systemctl restart dnscrypt-proxy
 systemctl restart dnsmasq
 systemctl restart tunneld
 
-# Outro
 whiptail --title "Installation Complete" --msgbox \
 "Tunneld installation complete.
 
