@@ -193,19 +193,19 @@ Config and networking will be managed by this box.
 " 14 70; then
 
   tmpdir=$(mktemp -d)
-  beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/releases/tunneld-beta-linux-arm64.tar.gz"
-  sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/releases/checksums.txt"
+  beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
+  sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
 
   whiptail --title "Tunneld Beta" --msgbox "Fetching beta binary for ARM64..." 8 50
 
   curl -fL "$beta_url" -o "$tmpdir/tunneld-beta.tar.gz"
   curl -fsSL "$sums_url" -o "$tmpdir/checksums.txt" || true
 
-  echo "Expected checksum for tunneld-beta-linux-arm64.tar.gz:"
-  grep "tunneld-beta-linux-arm64.tar.gz" "$tmpdir/checksums.txt" || echo "No checksum found."
+  echo "Expected checksum for tunneld-pre-alpha.tar.gz:"
+  grep "tunneld-pre-alpha.tar.gz" "$tmpdir/checksums.txt" || echo "No checksum found."
 
   # Attempt checksum verify if sha256sum and entry exist
-  if grep -q "tunneld-beta-linux-arm64.tar.gz" "$tmpdir/checksums.txt" 2>/dev/null; then
+  if grep -q "tunneld-pre-alpha.tar.gz" "$tmpdir/checksums.txt" 2>/dev/null; then
     (
       cd "$tmpdir"
       if sha256sum --status -c checksums.txt 2>/dev/null; then
