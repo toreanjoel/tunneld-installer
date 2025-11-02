@@ -67,6 +67,7 @@ DOWN_IFACE=$(whiptail --title "Step 2/7: Downstream (LAN)" --menu "Select downst
 GATEWAY=$(whiptail --title "Gateway IP" --inputbox "Gateway IP (CIDR /24 assumed)" 10 60 "$GATEWAY" 3>&1 1>&2 2>&3) || exit 1
 DHCP_START=$(whiptail --title "DHCP Start" --inputbox "Start address" 10 60 "$DHCP_START" 3>&1 1>&2 2>&3) || exit 1
 DHCP_END=$(whiptail --title "DHCP End" --inputbox "End address" 10 60 "$DHCP_END" 3>&1 1>&2 2>&3) || exit 1
+WIFI_COUNTRY=$(whiptail --title "Wi-Fi Country / Regulatory Domain" --inputbox "Enter the 2-letter country code for this device's wireless regulatory domain (example: US, ZA, DE, UK). This controls which Wi-Fi channels are allowed." 12 72 "" 3>&1 1>&2 2>&3) || exit 1
 
 cat > "$CONFIG_DIR/interfaces.conf" <<EOF
 UPSTREAM_INTERFACE=$UP_IFACE
@@ -265,6 +266,7 @@ Environment=WIFI_INTERFACE=$UP_IFACE
 Environment=LAN_INTERFACE=$DOWN_IFACE
 Environment=GATEWAY=$GATEWAY
 Environment=TUNNELD_DATA=$DATA_DIR
+Environment=WIFI_COUNTRY=$WIFI_COUNTRY
 Environment=MULLVAD_INTERFACE=
 Environment=DNS_CLUSTER_QUERY=
 ExecStart=$APP_DIR/bin/tunneld start
