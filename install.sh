@@ -38,9 +38,14 @@ This wizard will:
 
 Press OK to begin." 20 74
 
-whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip, iw" 10 74
+whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip, iw, systemd-timesyncd, fake-hwclock" 10 74
 apt-get update
-apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip iw -y
+apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip iw systemd-timesyncd fake-hwclock -y
+timedatectl set-ntp true
+systemctl enable --now systemd-timesyncd.service
+systemctl enable --now fake-hwclock.service
+systemctl enable --now systemd-time-wait-sync.service
+
 curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok
 
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
@@ -142,8 +147,8 @@ rm -rf "$tmpdir"
 cat > /etc/systemd/system/dnscrypt-proxy.service <<EOF
 [Unit]
 Description=dnscrypt-proxy
-After=network.target
-Wants=network-online.target
+After=network-online.target time-sync.target
+Wants=network-online.target time-sync.target
 
 [Service]
 ExecStart=/usr/local/bin/dnscrypt-proxy -config $DNSCRYPT_DIR/dnscrypt-proxy.toml
