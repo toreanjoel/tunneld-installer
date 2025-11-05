@@ -147,8 +147,8 @@ rm -rf "$tmpdir"
 cat > /etc/systemd/system/dnscrypt-proxy.service <<EOF
 [Unit]
 Description=dnscrypt-proxy
-After=network-online.target time-sync.target
-Wants=network-online.target time-sync.target
+After=network-online.target dhcpcd.service
+Wants=network-online.target dhcpcd.service
 
 [Service]
 ExecStart=/usr/local/bin/dnscrypt-proxy -config $DNSCRYPT_DIR/dnscrypt-proxy.toml
@@ -240,8 +240,8 @@ SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
 [Unit]
 Description=Tunneld
-After=network-online.target dnscrypt-proxy.service
-Wants=network-online.target
+After=network-online.target dhcpcd.service dnscrypt-proxy.service
+Wants=network-online.target dhcpcd.service dnscrypt-proxy.service
 
 [Service]
 Type=simple
