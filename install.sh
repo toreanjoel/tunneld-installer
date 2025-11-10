@@ -255,6 +255,7 @@ Environment=LAN_INTERFACE=$DOWN_IFACE
 Environment=GATEWAY=$GATEWAY
 Environment=TUNNELD_DATA=$DATA_DIR
 Environment=WIFI_COUNTRY=$WIFI_COUNTRY
+Environment=DEVICE_ID=$DEVICE_ID
 Environment=MULLVAD_INTERFACE=
 Environment=DNS_CLUSTER_QUERY=
 ExecStart=$APP_DIR/bin/tunneld start

@@ -163,6 +163,8 @@ After this, the dashboard should be reachable.
 
 ## Uninstallation
 
+### This will require a restart of the device after uninstall to access it over SSH on another subnet which you will need to do as the DHCP server is removed
+
 To completely remove Tunneld:
 
 ```bash
