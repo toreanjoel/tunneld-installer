@@ -35,14 +35,6 @@ chmod +x update.sh
 sudo ./update.sh
 ```
 
-Uninstall:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/uninstall.sh -o uninstall.sh
-chmod +x uninstall.sh
-sudo ./uninstall.sh
-```
-
 ---
 
 ## pre-alpha Builds and Integrity
@@ -51,7 +43,7 @@ During the pre-alpha phase:
 
 - The installer and updater pull a single ARM64 tarball from this repo:
 
-  - `releases/tunneld-pre-alpha-linux-arm64.tar.gz`
+  - `releases/tunneld-pre-alpha.tar.gz`
 
 - A matching checksum file is published alongside it:
 
@@ -166,30 +158,6 @@ After this, the dashboard should be reachable.
 
    - Use Zrok to share local services.
    - To self-host your controller, follow the Zrok self-hosting documentation.
-
----
-
-## Updating Tunneld (pre-alpha builds)
-
-To update just the Tunneld application binary without redoing network setup:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/main/update.sh -o update.sh
-chmod +x update.sh
-sudo ./update.sh
-```
-
-What `update.sh` does:
-
-1. Stops the `tunneld` service.
-2. Downloads the current pre-alpha tarball (`tunneld-pre-alpha-linux-arm64.tar.gz`) and the published `checksums.txt`.
-3. Shows and attempts to verify the checksum.
-4. Extracts the new build into `/opt/tunneld`.
-5. Restarts `tunneld`.
-
-Your DHCP/DNS settings and network config are not touched.
-
-When Tunneld transitions from pre-alpha to open source, `update.sh` will be updated to fetch signed, tagged releases from the main Tunneld repo instead of the single rotating pre-alpha build.
 
 ---
 
