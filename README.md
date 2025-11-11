@@ -27,12 +27,12 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
-Update to the newest pre-alpha build later (without reinstalling full networking):
+Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/update.sh -o update.sh
-chmod +x update.sh
-sudo ./update.sh
+curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/uninstall.sh -o uninstall.sh
+chmod +x uninstall.sh
+sudo ./uninstall.sh
 ```
 
 ---
