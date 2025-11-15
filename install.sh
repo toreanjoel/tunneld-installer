@@ -198,8 +198,6 @@ Config and networking will be managed by this box.
   beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
   sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
 
-  whiptail --title "Tunneld Pre-Alpha" --msgbox "Fetching Tunneld pre-alpha binary for ARM64..." 8 50
-
   curl -fL "$beta_url" -o "$tmpdir/tunneld-pre-alpha.tar.gz"
   curl -fsSL "$sums_url" -o "$tmpdir/checksums.txt" || true
 
