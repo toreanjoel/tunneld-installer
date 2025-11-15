@@ -33,10 +33,18 @@ This wizard will:
   3) Configure dnsmasq
   4) Install & configure dnscrypt-proxy (Mullvad only)
   5) Fetch blocklist
-  6) (Optional) Download a Tunneld release
+  6) (Optional) Download a Tunneld pre-alpha release
   7) Enable & start services
 
-Press OK to begin." 20 74
+Important:
+  - The Tunneld uninstaller will remove Tunneld itself, its configs,
+    logs and systemd units.
+  - It will NOT remove system packages installed as dependencies
+    (e.g. dnsmasq, dhcpcd, iptables, fake-hwclock, etc.).
+  - You can always remove those manually later with apt if you want
+    a completely clean system.
+
+Press OK to begin." 24 80
 
 whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip, iw, systemd-timesyncd, fake-hwclock" 10 74
 apt-get update
@@ -179,10 +187,10 @@ chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
 whiptail --title "Step 5/7" --msgbox "Hagezi blocklist fetched and wired into dnsmasq." 8 70
 
-if whiptail --title "Step 6/7: Tunneld Beta Release" --yesno \
-"Download and install the current Tunneld beta build now?
+if whiptail --title "Step 6/7: Tunneld Pre-Alpha Release" --yesno \
+"Download and install the current Tunneld pre-alpha build now?
 
-This is pre-release software intended for testing.
+This is an early pre-release build intended for testing.
 Config and networking will be managed by this box.
 " 14 70; then
 
@@ -190,9 +198,9 @@ Config and networking will be managed by this box.
   beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
   sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
 
-  whiptail --title "Tunneld Beta" --msgbox "Fetching beta binary for ARM64..." 8 50
+  whiptail --title "Tunneld Pre-Alpha" --msgbox "Fetching Tunneld pre-alpha binary for ARM64..." 8 50
 
-  curl -fL "$beta_url" -o "$tmpdir/tunneld-beta.tar.gz"
+  curl -fL "$beta_url" -o "$tmpdir/tunneld-pre-alpha.tar.gz"
   curl -fsSL "$sums_url" -o "$tmpdir/checksums.txt" || true
 
   echo "Expected checksum for tunneld-pre-alpha.tar.gz:"
@@ -211,15 +219,14 @@ Config and networking will be managed by this box.
     echo "Skipping checksum verification."
   fi
 
-  tar -xzf "$tmpdir/tunneld-beta.tar.gz" -C "$APP_DIR"
-
+  tar -xzf "$tmpdir/tunneld-pre-alpha.tar.gz" -C "$APP_DIR"
   rm -rf "$tmpdir"
 
   whiptail --msgbox \
-"Tunneld beta files placed in:
+"Tunneld pre-alpha files placed in:
   $APP_DIR
 
-This is an unsigned beta build, not a final tagged release.
+This is an unsigned pre-alpha build, not a final tagged release.
 " 14 70
 else
   whiptail --msgbox \
