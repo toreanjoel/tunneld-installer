@@ -11,6 +11,8 @@ LOG_DIR="/var/log/tunneld"
 DATA_DIR="/var/lib/tunneld"
 RUN_DIR="/var/run/tunneld"
 DNSCRYPT_BIN="/usr/local/bin/dnscrypt-proxy"
+NGINX_SITE="/etc/nginx/sites-available/tunneld-gateway"
+NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/tunneld-gateway"
 
 whiptail --title "Uninstall Tunneld (Pre-Alpha)" --yesno \
 "Completely remove Tunneld and its pre-alpha files?
@@ -18,9 +20,10 @@ whiptail --title "Uninstall Tunneld (Pre-Alpha)" --yesno \
 This will:
   1) Stop and disable Tunneld + dnscrypt-proxy
   2) Remove app/config/data/logs
-  3) Remove systemd units (tunneld, dnscrypt-proxy, zrok-*)
-  4) Remove dnsmasq/dhcpcd symlinks (if pointing to Tunneld)
-  5) Remove /usr/local/bin/dnscrypt-proxy
+  3) Remove nginx site link/config (tunneld-gateway)
+  4) Remove systemd units (tunneld, dnscrypt-proxy, zrok-*)
+  5) Remove dnsmasq/dhcpcd symlinks (if pointing to Tunneld)
+  6) Remove /usr/local/bin/dnscrypt-proxy
 
 Important:
   - This uninstaller NEVER removes system packages installed via apt
@@ -78,6 +81,19 @@ fi
 systemctl restart dhcpcd 2>/dev/null || true
 systemctl restart dnsmasq 2>/dev/null || true
 
+echo "Removing nginx config..."
+if [ -L "$NGINX_SITE_ENABLED" ] || [ -f "$NGINX_SITE_ENABLED" ]; then
+  rm -f "$NGINX_SITE_ENABLED"
+  echo "Removed $NGINX_SITE_ENABLED"
+fi
+
+if [ -f "$NGINX_SITE" ]; then
+  rm -f "$NGINX_SITE"
+  echo "Removed $NGINX_SITE"
+fi
+
+systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
+
 if [ -x "$DNSCRYPT_BIN" ]; then
   rm -f "$DNSCRYPT_BIN"
   echo "Removed $DNSCRYPT_BIN"
@@ -97,6 +113,7 @@ Removed:
   - $DATA_DIR
   - $LOG_DIR
   - $RUN_DIR
+  - $NGINX_SITE (and enabled link)
   - /usr/local/bin/dnscrypt-proxy
   - systemd units (tunneld, dnscrypt-proxy, zrok-* / zrok-access-*)
 
@@ -105,11 +122,12 @@ Left untouched unless they pointed to Tunneld:
   - /etc/dhcpcd.conf
 
 Note:
+  - nginx remains installed; default site stays disabled unless you re-enable it.
   - System packages installed as dependencies (dnsmasq, dhcpcd, iptables,
     fake-hwclock, etc.) were NOT removed.
   - The Tunneld uninstaller never removes OS packages.
     If you want to remove them, use e.g.:
-      sudo apt-get purge dnsmasq dhcpcd iptables fake-hwclock
+      sudo apt-get purge dnsmasq dhcpcd nginx iptables fake-hwclock
 
 Base services (dhcpcd, dnsmasq) were restarted.
 " 24 84

@@ -40,19 +40,24 @@ Important:
   - The Tunneld uninstaller will remove Tunneld itself, its configs,
     logs and systemd units.
   - It will NOT remove system packages installed as dependencies
-    (e.g. dnsmasq, dhcpcd, iptables, fake-hwclock, etc.).
+    (e.g. dnsmasq, dhcpcd, nginx, iptables, fake-hwclock, etc.).
   - You can always remove those manually later with apt if you want
     a completely clean system.
 
 Press OK to begin." 24 80
 
-whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip, iw, systemd-timesyncd, fake-hwclock" 10 74
+whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, bc, unzip, iw, systemd-timesyncd, fake-hwclock" 10 74
 apt-get update
-apt-get install dnsmasq dhcpcd git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip iw systemd-timesyncd fake-hwclock -y
+apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables bc unzip iw systemd-timesyncd fake-hwclock -y
 timedatectl set-ntp true
 systemctl enable --now systemd-timesyncd.service
 systemctl enable --now fake-hwclock.service
 systemctl enable --now systemd-time-wait-sync.service
+
+# Prepare nginx for tunneld gateway routing (app will manage server/upstream blocks)
+mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+rm -f /etc/nginx/sites-enabled/default
+systemctl enable --now nginx
 
 curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok
 
@@ -279,7 +284,8 @@ nameserver 127.0.0.1
 EOF
 
 systemctl daemon-reload
-systemctl enable dhcpcd dnsmasq dnscrypt-proxy tunneld
+systemctl enable dhcpcd dnsmasq dnscrypt-proxy nginx tunneld
+systemctl restart nginx
 systemctl restart dhcpcd
 systemctl restart dnscrypt-proxy
 systemctl restart dnsmasq
@@ -296,7 +302,7 @@ Access:
   http://$GATEWAY
 
 Verify services running:
-  systemctl status dnscrypt-proxy dnsmasq dhcpcd tunneld
+  systemctl status nginx dnscrypt-proxy dnsmasq dhcpcd tunneld
 
 OpenZiti/Zrok:
   To expose services, connect to your device to Tunneld OpenZiti controller through the dashboard to get started.
