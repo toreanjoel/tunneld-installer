@@ -110,6 +110,7 @@ Installs:
 - dnsmasq  
 - dhcpcd  
 - dnscrypt-proxy (standalone binary)  
+- nginx (default site disabled; add your own site files)
 - iptables, bc, unzip, iw  
 - systemd-timesyncd + fake-hwclock  
 - OpenZiti + Zrok  
@@ -128,6 +129,10 @@ Symlinks them into place:
 - `/etc/dhcpcd.conf` → `/etc/tunneld/dhcpcd.conf`
 - `/etc/dnsmasq.conf` → `/etc/tunneld/dnsmasq.conf`
 
+Notes:
+
+- The default nginx site is disabled to avoid port conflicts; add your own sites under `/etc/nginx/sites-available` and enable them as needed.
+
 Fetches + installs the Hagezi blocklist.
 
 ### **4. Deploys Tunneld**
@@ -141,6 +146,7 @@ Services managed:
 
 ```
 tunneld.service
+nginx.service
 dnscrypt-proxy.service
 dnsmasq.service
 dhcpcd.service
@@ -159,7 +165,7 @@ http://10.0.0.1
 Verify services:
 
 ```bash
-systemctl status tunneld dnscrypt-proxy dnsmasq dhcpcd
+systemctl status nginx tunneld dnscrypt-proxy dnsmasq dhcpcd
 ```
 
 Expose services using Zrok.
@@ -192,13 +198,13 @@ The uninstaller will:
 /usr/local/bin/dnscrypt-proxy
 ```
 
-3. Remove systemd units  
-4. Remove `/etc/dhcpcd.conf` or `/etc/dnsmasq.conf` if they were symlinks to Tunneld  
-5. Restart base services (best effort)
+3. Remove nginx site link/config (`/etc/nginx/sites-{available,enabled}/tunneld-gateway`)  
+4. Remove systemd units  
+5. Remove `/etc/dhcpcd.conf` or `/etc/dnsmasq.conf` if they were symlinks to Tunneld  
+6. Restart base services (best effort)
 
 **Note:**  
-The uninstaller **never** removes system packages (dnsmasq, dhcpcd, iptables, etc.).  
-Remove them manually with apt if desired.
+The uninstaller never removes OS packages (dnsmasq, dhcpcd, nginx, iptables, etc.). Remove them manually with apt if desired. The nginx default site remains disabled; re-enable it if you need a generic site.
 
 ---
 
@@ -223,6 +229,7 @@ Remove them manually with apt if desired.
 | `dnsmasq.conf`                        | DNS & DHCP config               |
 | `dnscrypt/dnscrypt-proxy.toml`        | Encrypted DNS settings          |
 | `blacklists/dnsmasq-system.blacklist` | Ad/tracker block rules          |
+| `/etc/nginx/sites-available/`         | Place your nginx site files; enable via `sites-enabled` |
 
 ---
 
@@ -234,6 +241,7 @@ Tunneld builds on:
 - Hagezi DNS Blocklists  
 - dnscrypt-proxy  
 - dnsmasq  
-- dhcpcd  
+- dhcpcd
+- nginx
 
 These open-source tools make Tunneld possible.
