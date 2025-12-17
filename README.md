@@ -1,6 +1,6 @@
 # Tunneld Installer
 
-> **⚠️ Tunneld is in active development (pre-alpha phase).**
+> **⚠️ Tunneld is in heavy active development (pre-alpha phase). Expect alot of breaking changes**
 >
 > A single ARM64 pre-alpha build is published at a time for testing.
 > The source code and versioned releases will become available once the project is opened.
@@ -30,17 +30,13 @@ Creating a public share on a self hosted control plane running on a Nano Pi Zero
 Install Tunneld directly:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/install.sh -o install.sh
-chmod +x install.sh
-sudo ./install.sh
+curl -fsSL https://install.tunneld.sh | sudo bash
 ```
 
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/uninstall.sh -o uninstall.sh
-chmod +x uninstall.sh
-sudo ./uninstall.sh
+curl -fsSL https://install.tunneld.sh | sudo bash
 ```
 
 ---
