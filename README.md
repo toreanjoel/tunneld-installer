@@ -30,13 +30,17 @@ Creating a public share on a self hosted control plane running on a Nano Pi Zero
 Install Tunneld directly:
 
 ```bash
-curl -fsSL https://install.tunneld.sh | sudo bash
+curl -fsSL https://install.tunneld.sh -o install.sh
+chmod +x install.sh
+sudo ./install.sh
 ```
 
 Uninstall:
 
 ```bash
-curl -fsSL https://install.tunneld.sh | sudo bash
+curl -fsSL https://install.tunneld.sh -o install.sh
+chmod +x install.sh
+sudo ./install.sh
 ```
 
 ---
