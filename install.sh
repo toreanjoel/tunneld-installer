@@ -46,13 +46,25 @@ Important:
 
 Press OK to begin." 24 80
 
-whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock" 10 74
+whiptail --title "Step 1/7: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools" 10 74
 apt-get update
-apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock -y
+apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools -y
 timedatectl set-ntp true
 systemctl enable --now systemd-timesyncd.service
 systemctl enable --now fake-hwclock.service
 systemctl enable --now systemd-time-wait-sync.service
+
+# Configure Zram & Swappiness
+cat > /etc/default/zramswap <<EOF
+ALGO=lz4
+PERCENTAGE=50
+PRIORITY=100
+EOF
+if ! grep -q "vm.swappiness=150" /etc/sysctl.conf; then
+  echo "vm.swappiness=150" >> /etc/sysctl.conf
+fi
+sysctl -p || true
+systemctl restart zramswap || true
 
 # Prepare nginx for tunneld gateway routing (app will manage server/upstream blocks)
 mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
@@ -268,6 +280,7 @@ Environment=WIFI_COUNTRY=$WIFI_COUNTRY
 Environment=DEVICE_ID=$DEVICE_ID
 Environment=MULLVAD_INTERFACE=
 Environment=DNS_CLUSTER_QUERY=
+Environment="ERL_FLAGS=-os_mon system_memory_high_watermark 0.15"
 ExecStart=$APP_DIR/bin/tunneld start
 ExecStop=$APP_DIR/bin/tunneld stop
 Restart=on-failure
@@ -284,11 +297,12 @@ nameserver 127.0.0.1
 EOF
 
 systemctl daemon-reload
-systemctl enable dhcpcd dnsmasq dnscrypt-proxy nginx tunneld
+systemctl enable dhcpcd dnsmasq dnscrypt-proxy nginx tunneld zramswap
 systemctl restart nginx
 systemctl restart dhcpcd
 systemctl restart dnscrypt-proxy
 systemctl restart dnsmasq
+systemctl restart zramswap
 systemctl restart tunneld
 
 whiptail --title "Installation Complete" --msgbox \
