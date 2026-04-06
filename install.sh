@@ -54,7 +54,7 @@ Important:
 
 Press OK to begin." 24 80
 
-whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl" 10 74
+whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl" 10 74
 apt-get update
 apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl -y
 timedatectl set-ntp true
@@ -80,8 +80,22 @@ rm -f /etc/nginx/sites-enabled/default
 chown "$REAL_USER:$REAL_GROUP" /etc/nginx/certs
 systemctl enable --now nginx
 
-# Install Zrok
-curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok
+# Warn if zrok v1 is installed
+if command -v zrok >/dev/null 2>&1 && ! command -v zrok2 >/dev/null 2>&1; then
+  whiptail --title "Zrok v1 Detected" --msgbox \
+"WARNING: zrok v1 is installed on this system.
+Tunneld now requires zrok2 (v2). The old zrok v1
+package will NOT be removed automatically.
+
+After installation, you may remove v1 manually:
+  sudo apt-get purge zrok zrok-agent
+
+Config migration (~/.zrok → ~/.zrok2) is also
+your responsibility if needed." 14 60
+fi
+
+# Install Zrok2
+curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok2
 
 if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
   systemctl stop dnscrypt-proxy || true
