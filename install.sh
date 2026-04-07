@@ -56,11 +56,11 @@ Press OK to begin." 24 80
 
 whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl" 10 74
 
-# Add Mullvad GPG key if their repo is present but key is missing
-if grep -rq "repository.mullvad.net" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
-  curl -fsSL https://repository.mullvad.net/deb/mullvad-keyring.asc \
-    | gpg --dearmor -o /usr/share/keyrings/mullvad-keyring.gpg || true
-fi
+# Remove Mullvad apt repo if present — tunneld uses Mullvad DoH via dnscrypt-proxy,
+# not the Mullvad VPN package, so this repo is not needed and causes GPG errors.
+grep -rlq "repository.mullvad.net" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
+  | xargs -r rm -f
+sed -i '/repository\.mullvad\.net/d' /etc/apt/sources.list 2>/dev/null || true
 
 apt-get update
 apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl -y
