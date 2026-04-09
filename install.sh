@@ -58,8 +58,8 @@ whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, Open
 
 # Remove Mullvad apt repo if present — tunneld uses Mullvad DoH via dnscrypt-proxy,
 # not the Mullvad VPN package, so this repo is not needed and causes GPG errors.
-grep -rlq "repository.mullvad.net" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
-  | xargs -r rm -f
+grep -rl "repository.mullvad.net" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
+  | xargs -r rm -f || true
 sed -i '/repository\.mullvad\.net/d' /etc/apt/sources.list 2>/dev/null || true
 
 apt-get update
