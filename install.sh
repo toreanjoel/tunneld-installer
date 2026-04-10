@@ -23,6 +23,8 @@ RUNTIME_DIR="/var/run/tunneld"
 BLACKLIST_DIR="$CONFIG_DIR/blacklists"
 DNSCRYPT_DIR="$CONFIG_DIR/dnscrypt"
 CA_DIR="$CONFIG_DIR/ca"
+BACKUP_DIR="$DATA_DIR/backup"
+BACKUP_FILE="$BACKUP_DIR/tunneld-backup.tar.gz"
 
 mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR" "$DNSCRYPT_DIR"
 
@@ -47,12 +49,16 @@ This wizard will:
   7) Generate Root CA
   8) Enable & start services
 
+If an existing installation is found, a backup will be created
+before updating. If the new version fails to start, it will be
+automatically rolled back to the previous version.
+
 Important:
   - The Tunneld uninstaller will remove Tunneld itself, its configs,
     logs and systemd units.
   - It will NOT remove system packages installed as dependencies.
 
-Press OK to begin." 24 80
+Press OK to begin." 26 80
 
 whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl" 10 74
 
@@ -241,14 +247,47 @@ chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
 whiptail --title "Step 5/8" --msgbox "Hagezi blocklist fetched." 8 60
 
+# --- Backup existing installation ---
+if [ -d "$APP_DIR/bin" ] && [ -x "$APP_DIR/bin/tunneld" ]; then
+  BACKUP_VERSION=$(ls "$APP_DIR/releases/" 2>/dev/null | head -1)
+  BACKUP_VERSION=${BACKUP_VERSION:-unknown}
+  mkdir -p "$BACKUP_DIR"
+  rm -f "$BACKUP_FILE"
+  if tar -czf "$BACKUP_FILE" -C /opt tunneld 2>/dev/null; then
+    whiptail --title "Backup" --msgbox "Existing Tunneld (v${BACKUP_VERSION}) backed up.\n\nBackup: $BACKUP_FILE" 10 60
+  else
+    rm -f "$BACKUP_FILE"
+    whiptail --title "Backup Failed" --msgbox "Could not back up existing installation.\n\nIf the update fails, manual recovery will be needed." 10 60
+  fi
+fi
+
 if whiptail --title "Step 6/8: Tunneld Release" --yesno "Download and install pre-alpha build?" 10 60; then
   tmpdir=$(mktemp -d)
   beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
   sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
 
   curl -fL "$beta_url" -o "$tmpdir/tunneld-pre-alpha.tar.gz"
-  curl -fsSL "$sums_url" -o "$tmpdir/checksums.txt" || true
-  
+  curl -fsSL "$sums_url" -o "$tmpdir/checksums.txt"
+
+  # Verify checksum
+  if [ -f "$tmpdir/checksums.txt" ]; then
+    EXPECTED_SHA=$(awk '{print $1}' "$tmpdir/checksums.txt")
+    ACTUAL_SHA=$(sha256sum "$tmpdir/tunneld-pre-alpha.tar.gz" | awk '{print $1}')
+    if [ "$EXPECTED_SHA" != "$ACTUAL_SHA" ]; then
+      rm -rf "$tmpdir"
+      whiptail --title "Checksum Failed" --msgbox \
+"Download checksum verification failed.
+
+Expected: $EXPECTED_SHA
+Actual:   $ACTUAL_SHA
+
+The download may be corrupted. Please try again or
+report this issue at:
+https://github.com/toreanjoel/tunneld-installer/issues" 14 70
+      exit 1
+    fi
+  fi
+
   tar -xzf "$tmpdir/tunneld-pre-alpha.tar.gz" -C "$APP_DIR"
   rm -rf "$tmpdir"
   whiptail --msgbox "Tunneld files installed." 8 60
@@ -328,7 +367,26 @@ systemctl restart dnsmasq
 systemctl restart zramswap
 systemctl restart tunneld
 
-whiptail --title "Installation Complete" --msgbox \
+# --- Verify tunneld service started ---
+VERIFY_TIMEOUT=60
+VERIFY_INTERVAL=5
+ELAPSED=0
+SERVICE_OK=false
+
+while [ $ELAPSED -lt $VERIFY_TIMEOUT ]; do
+  if systemctl is-active --quiet tunneld 2>/dev/null; then
+    SERVICE_OK=true
+    break
+  fi
+  sleep $VERIFY_INTERVAL
+  ELAPSED=$((ELAPSED + VERIFY_INTERVAL))
+done
+
+if [ "$SERVICE_OK" = true ]; then
+  # Clean up backup on success
+  rm -f "$BACKUP_FILE"
+
+  whiptail --title "Installation Complete" --msgbox \
 "Tunneld installation complete.
 
 App:    $APP_DIR
@@ -341,3 +399,69 @@ Access:
 
 Services verified.
 Done." 24 80
+else
+  # Service failed to start
+  JOURNAL_OUTPUT=$(journalctl -u tunneld --no-pager -n 20 2>/dev/null || echo "Unable to retrieve logs.")
+
+  if [ -f "$BACKUP_FILE" ]; then
+    # Rollback to previous version
+    systemctl stop tunneld 2>/dev/null || true
+    rm -rf "$APP_DIR"
+    tar -xzf "$BACKUP_FILE" -C /opt
+    systemctl restart tunneld
+
+    # Verify rollback
+    ROLLBACK_OK=false
+    ELAPSED=0
+    while [ $ELAPSED -lt $VERIFY_TIMEOUT ]; do
+      if systemctl is-active --quiet tunneld 2>/dev/null; then
+        ROLLBACK_OK=true
+        break
+      fi
+      sleep $VERIFY_INTERVAL
+      ELAPSED=$((ELAPSED + VERIFY_INTERVAL))
+    done
+
+    if [ "$ROLLBACK_OK" = true ]; then
+      whiptail --title "Update Rolled Back" --msgbox \
+"The new version failed to start and was rolled back
+to your previous installation.
+
+Service logs:
+$JOURNAL_OUTPUT
+
+Your previous version is running. Please report this
+issue at:
+https://github.com/toreanjoel/tunneld-installer/issues" 24 80
+    else
+      whiptail --title "Rollback Failed" --msgbox \
+"CRITICAL: The new version failed to start, and the
+rollback also failed.
+
+Service logs:
+$JOURNAL_OUTPUT
+
+Your device may be inaccessible. To recover:
+  1. SSH into the device
+  2. Check: journalctl -u tunneld
+  3. Reinstall: sudo ./install.sh
+
+Report this issue at:
+https://github.com/toreanjoel/tunneld-installer/issues" 24 80
+    fi
+  else
+    # No backup available (first install)
+    whiptail --title "Service Failed" --msgbox \
+"The Tunneld service failed to start.
+
+Service logs:
+$JOURNAL_OUTPUT
+
+Since this is a new installation, no rollback is
+available. To troubleshoot:
+  1. Check: journalctl -u tunneld
+  2. Reinstall: sudo ./install.sh
+  3. Report at:
+     https://github.com/toreanjoel/tunneld-installer/issues" 24 80
+  fi
+fi

@@ -102,6 +102,12 @@ fi
 echo "Removing Tunneld directories..."
 rm -rf "$APP_DIR" "$CONFIG_DIR" "$DATA_DIR" "$LOG_DIR" "$RUN_DIR"
 
+# Remove installer backup if present
+if [ -d "/var/lib/tunneld/backup" ]; then
+  rm -rf "/var/lib/tunneld/backup"
+  echo "Removed installer backup"
+fi
+
 systemctl daemon-reload || true
 
 whiptail --title "Uninstall Complete" --msgbox \
