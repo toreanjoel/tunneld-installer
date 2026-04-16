@@ -60,7 +60,7 @@ Important:
 
 Press OK to begin." 26 80
 
-whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl" 10 74
+whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl, wireguard-tools" 10 74
 
 # Remove Mullvad apt repo if present — tunneld uses Mullvad DoH via dnscrypt-proxy,
 # not the Mullvad VPN package, so this repo is not needed and causes GPG errors.
@@ -69,7 +69,14 @@ grep -rl "repository.mullvad.net" /etc/apt/sources.list /etc/apt/sources.list.d/
 sed -i '/repository\.mullvad\.net/d' /etc/apt/sources.list 2>/dev/null || true
 
 apt-get update
-apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl -y
+apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl wireguard-tools -y
+
+# Verify WireGuard kernel module is available (built-in on kernel 5.6+, DKMS fallback)
+if ! modprobe -n wireguard 2>/dev/null; then
+  echo "WireGuard kernel module not found, installing wireguard-dkms..."
+  apt-get install -y wireguard-dkms || whiptail --title "WireGuard Warning" --msgbox \
+    "WireGuard kernel module not detected and DKMS install failed.\n\nVPN features may not work. Ensure your kernel is 5.6+ or\ninstall wireguard-dkms manually." 12 70
+fi
 timedatectl set-ntp true
 systemctl enable --now systemd-timesyncd.service
 systemctl enable --now fake-hwclock.service
