@@ -21,12 +21,10 @@ LOG_DIR="/var/log/tunneld"
 DATA_DIR="/var/lib/tunneld"
 RUNTIME_DIR="/var/run/tunneld"
 BLACKLIST_DIR="$CONFIG_DIR/blacklists"
-DNSCRYPT_DIR="$CONFIG_DIR/dnscrypt"
-CA_DIR="$CONFIG_DIR/ca"
 BACKUP_DIR="$DATA_DIR/backup"
 BACKUP_FILE="$BACKUP_DIR/tunneld-backup.tar.gz"
 
-mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR" "$DNSCRYPT_DIR"
+mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR"
 
 UP_IFACE="${UP_IFACE:-}"
 DOWN_IFACE="${DOWN_IFACE:-}"
@@ -43,11 +41,9 @@ This wizard will:
   1) Install dependencies
   2) Configure network (upstream/downstream, DHCP)
   3) Configure dnsmasq
-  4) Install & configure dnscrypt-proxy (Mullvad only)
-  5) Fetch blocklist
-  6) (Optional) Download a Tunneld pre-alpha release
-  7) Generate Root CA
-  8) Enable & start services
+  4) Fetch blocklist
+  5) (Optional) Download a Tunneld pre-alpha release
+  6) Enable & start services
 
 If an existing installation is found, a backup will be created
 before updating. If the new version fails to start, it will be
@@ -60,13 +56,7 @@ Important:
 
 Press OK to begin." 26 80
 
-whiptail --title "Step 1/8: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl, wireguard-tools" 10 74
-
-# Remove Mullvad apt repo if present — tunneld uses Mullvad DoH via dnscrypt-proxy,
-# not the Mullvad VPN package, so this repo is not needed and causes GPG errors.
-grep -rl "repository.mullvad.net" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
-  | xargs -r rm -f || true
-sed -i '/repository\.mullvad\.net/d' /etc/apt/sources.list 2>/dev/null || true
+whiptail --title "Step 1/6: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl, wireguard-tools" 10 74
 
 apt-get update
 apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl wireguard-tools -y
@@ -95,9 +85,8 @@ sysctl -p || true
 systemctl restart zramswap || true
 
 # Prepare nginx
-mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/certs
+mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 rm -f /etc/nginx/sites-enabled/default
-chown "$REAL_USER:$REAL_GROUP" /etc/nginx/certs
 systemctl enable --now nginx
 
 # Warn if zrok v1 is installed
@@ -117,19 +106,13 @@ fi
 # Install Zrok2
 curl -sSf https://get.openziti.io/install.bash | sudo bash -s zrok2
 
-if dpkg -s dnscrypt-proxy >/dev/null 2>&1; then
-  systemctl stop dnscrypt-proxy || true
-  systemctl disable dnscrypt-proxy || true
-  apt-get purge -y dnscrypt-proxy || true
-fi
-
 mapfile -t ifaces < <(ip -o link show | awk -F': ' '{print $2}' | grep -vE '^(lo|docker|br-|veth|zt|tun|wg)')
 if [ ${#ifaces[@]} -eq 0 ]; then whiptail --msgbox "No interfaces found." 8 50; exit 1; fi
 
 menu_items=(); for i in "${ifaces[@]}"; do menu_items+=("$i" ""); done
-UP_IFACE=$(whiptail --title "Step 2/8: Upstream (Internet)" --menu "Select upstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
+UP_IFACE=$(whiptail --title "Step 2/6: Upstream (Internet)" --menu "Select upstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
 menu_items=(); for i in "${ifaces[@]}"; do [ "$i" != "$UP_IFACE" ] && menu_items+=("$i" ""); done
-DOWN_IFACE=$(whiptail --title "Step 2/8: Downstream (LAN)" --menu "Select downstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
+DOWN_IFACE=$(whiptail --title "Step 2/6: Downstream (LAN)" --menu "Select downstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
 
 GATEWAY=$(whiptail --title "Gateway IP" --inputbox "Gateway IP (CIDR /24 assumed)" 10 60 "$GATEWAY" 3>&1 1>&2 2>&3) || exit 1
 DHCP_START=$(whiptail --title "DHCP Start" --inputbox "Start address" 10 60 "$DHCP_START" 3>&1 1>&2 2>&3) || exit 1
@@ -156,7 +139,7 @@ nohook wpa_supplicant
 metric 100
 EOF
 ln -sf "$CONFIG_DIR/dhcpcd.conf" /etc/dhcpcd.conf
-whiptail --title "Step 2/8" --msgbox "Network settings saved." 8 60
+whiptail --title "Step 2/6" --msgbox "Network settings saved." 8 60
 
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
 port=5336
@@ -175,70 +158,7 @@ mkdir -p /etc/dnsmasq.d
 touch /etc/dnsmasq.d/tunneld_resources.conf
 chown "$REAL_USER:$REAL_GROUP" /etc/dnsmasq.d/tunneld_resources.conf
 
-whiptail --title "Step 3/8" --msgbox "dnsmasq configured." 8 60
-
-DNSCRYPT_VERSION="2.1.5"
-uname_arch=$(uname -m)
-case "$uname_arch" in
-  x86_64)   rel_arch="amd64"; tar_dir="linux-x86_64" ;;
-  aarch64|arm64) rel_arch="arm64"; tar_dir="linux-arm64" ;;
-  armv7l|armhf)  rel_arch="armv7";  tar_dir="linux-arm" ;;
-  armv6l)        rel_arch="armv6";  tar_dir="linux-arm" ;;
-  *) whiptail --msgbox "Unsupported arch: $uname_arch" 8 50; exit 1;;
-esac
-
-tmpdir=$(mktemp -d)
-pushd "$tmpdir" >/dev/null
-curl -fL "https://github.com/DNSCrypt/dnscrypt-proxy/releases/download/${DNSCRYPT_VERSION}/dnscrypt-proxy-linux_${rel_arch}-${DNSCRYPT_VERSION}.tar.gz" -o dnscrypt.tar.gz
-tar -xzf dnscrypt.tar.gz
-cd "${tar_dir}"
-
-install -m 755 dnscrypt-proxy /usr/local/bin/dnscrypt-proxy
-/usr/local/bin/dnscrypt-proxy -version >/dev/null || { whiptail --msgbox "dnscrypt-proxy failed to install"; exit 1; }
-
-if [ ! -f "$DNSCRYPT_DIR/dnscrypt-proxy.toml" ]; then
-  sed \
-    -e "s|^#\?listen_addresses = .*|listen_addresses = ['127.0.0.1:53', '127.0.0.1:5335']|g" \
-    -e "s|^#\?max_clients = .*|max_clients = 250|g" \
-    -e "s|^#\?server_names = .*|server_names = ['mullvad-doh']|g" \
-    example-dnscrypt-proxy.toml > "$DNSCRYPT_DIR/dnscrypt-proxy.toml" || cp example-dnscrypt-proxy.toml "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
-else
-  sed -i "s|^#\?listen_addresses = .*|listen_addresses = ['127.0.0.1:53', '127.0.0.1:5335']|g" "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
-  sed -i "s|^#\?server_names = .*|server_names = ['mullvad-doh']|g" "$DNSCRYPT_DIR/dnscrypt-proxy.toml"
-fi
-
-if ! grep -q "sources.*public-resolvers" "$DNSCRYPT_DIR/dnscrypt-proxy.toml"; then
-  cat >> "$DNSCRYPT_DIR/dnscrypt-proxy.toml" <<'EOF'
-[sources]
-  [sources.'public-resolvers']
-  urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md', 'https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md']
-  cache_file = '/etc/tunneld/dnscrypt/public-resolvers.md'
-  minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
-EOF
-fi
-popd >/dev/null
-rm -rf "$tmpdir"
-
-cat > /etc/systemd/system/dnscrypt-proxy.service <<EOF
-[Unit]
-Description=dnscrypt-proxy
-After=network-online.target dhcpcd.service
-Wants=network-online.target dhcpcd.service
-
-[Service]
-ExecStart=/usr/local/bin/dnscrypt-proxy -config $DNSCRYPT_DIR/dnscrypt-proxy.toml
-Restart=always
-RestartSec=5
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=full
-ProtectHome=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-whiptail --title "Step 4/8" --msgbox "dnscrypt-proxy installed." 8 60
+whiptail --title "Step 3/6" --msgbox "dnsmasq configured." 8 60
 
 cat > "$APP_DIR/update_blacklist.sh" <<'EOF'
 #!/bin/bash
@@ -252,23 +172,21 @@ systemctl is-active --quiet dnsmasq && systemctl reload dnsmasq || true
 EOF
 chmod +x "$APP_DIR/update_blacklist.sh"
 "$APP_DIR/update_blacklist.sh" || true
-whiptail --title "Step 5/8" --msgbox "Hagezi blocklist fetched." 8 60
+whiptail --title "Step 4/6" --msgbox "Hagezi blocklist fetched." 8 60
 
 # --- Backup existing installation ---
 if [ -d "$APP_DIR/bin" ] && [ -x "$APP_DIR/bin/tunneld" ]; then
-  BACKUP_VERSION=$(ls "$APP_DIR/releases/" 2>/dev/null | head -1)
-  BACKUP_VERSION=${BACKUP_VERSION:-unknown}
   mkdir -p "$BACKUP_DIR"
   rm -f "$BACKUP_FILE"
   if tar -czf "$BACKUP_FILE" -C /opt tunneld 2>/dev/null; then
-    whiptail --title "Backup" --msgbox "Existing Tunneld (v${BACKUP_VERSION}) backed up.\n\nBackup: $BACKUP_FILE" 10 60
+    whiptail --title "Backup" --msgbox "Existing Tunneld installation backed up.\n\nBackup: $BACKUP_FILE" 10 60
   else
     rm -f "$BACKUP_FILE"
     whiptail --title "Backup Failed" --msgbox "Could not back up existing installation.\n\nIf the update fails, manual recovery will be needed." 10 60
   fi
 fi
 
-if whiptail --title "Step 6/8: Tunneld Release" --yesno "Download and install pre-alpha build?" 10 60; then
+if whiptail --title "Step 5/6: Tunneld Release" --yesno "Download and install pre-alpha build?" 10 60; then
   tmpdir=$(mktemp -d)
   beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
   sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
@@ -302,37 +220,12 @@ else
   whiptail --msgbox "Skipping download." 8 60
 fi
 
-# Generate CA
-# We use the REAL_USER detected at start of script
-if [ ! -f "$CA_DIR/rootCA.key" ]; then
-    mkdir -p "$CA_DIR"
-    
-    # Generate Private Key
-    openssl genrsa -out "$CA_DIR/rootCA.key" 2048
-    
-    # Generate Root Cert (20 years)
-    openssl req -x509 -new -nodes -key "$CA_DIR/rootCA.key" \
-      -sha256 -days 7300 \
-      -out "$CA_DIR/rootCA.pem" \
-      -subj "/CN=Tunneld Gateway"
-      
-    # Secure the key (read/write only by owner)
-    chmod 600 "$CA_DIR/rootCA.key"
-    
-    # Assign ownership to the real user
-    chown -R "$REAL_USER:$REAL_GROUP" "$CA_DIR"
-    
-    whiptail --title "Step 7/8" --msgbox "Root CA generated in:\n$CA_DIR\n\nKey permissions set to user: $REAL_USER" 12 70
-else
-    whiptail --title "Step 7/8" --msgbox "Root CA already exists. Skipping generation." 8 60
-fi
-
 SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
 [Unit]
 Description=Tunneld
-After=network-online.target dhcpcd.service dnscrypt-proxy.service
-Wants=network-online.target dhcpcd.service dnscrypt-proxy.service
+After=network-online.target dhcpcd.service
+Wants=network-online.target dhcpcd.service
 
 [Service]
 Type=simple
@@ -347,7 +240,6 @@ Environment=GATEWAY=$GATEWAY
 Environment=TUNNELD_DATA=$DATA_DIR
 Environment=WIFI_COUNTRY=$WIFI_COUNTRY
 Environment=DEVICE_ID=$DEVICE_ID
-Environment=MULLVAD_INTERFACE=
 Environment=DNS_CLUSTER_QUERY=
 Environment="ERL_FLAGS=-os_mon system_memory_high_watermark 0.15"
 ExecStart=$APP_DIR/bin/tunneld start
@@ -366,10 +258,9 @@ nameserver 127.0.0.1
 EOF
 
 systemctl daemon-reload
-systemctl enable dhcpcd dnsmasq dnscrypt-proxy nginx tunneld zramswap
+systemctl enable dhcpcd dnsmasq nginx tunneld zramswap
 systemctl restart nginx
 systemctl restart dhcpcd
-systemctl restart dnscrypt-proxy
 systemctl restart dnsmasq
 systemctl restart zramswap
 systemctl restart tunneld
@@ -399,7 +290,6 @@ if [ "$SERVICE_OK" = true ]; then
 App:    $APP_DIR
 Config: $CONFIG_DIR
 Data:   $DATA_DIR
-CA:     $CA_DIR
 
 Access:
   http://$GATEWAY

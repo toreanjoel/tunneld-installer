@@ -84,7 +84,6 @@ A standalone gateway that:
 ### **Built-in Network Services**
 
 - **DNS & DHCP** - via dnsmasq  
-- **Encrypted DNS (DoH)** - via dnscrypt-proxy  
 - **System-wide blocklists** - via Hagezi DNS blocklist  
 
 All traffic stays local - no reliance on central infrastructure.
@@ -109,13 +108,10 @@ Installs:
 
 - dnsmasq  
 - dhcpcd  
-- dnscrypt-proxy (standalone binary)  
 - nginx (default site disabled; add your own site files)
 - iptables, bc, unzip, iw  
 - systemd-timesyncd + fake-hwclock  
 - OpenZiti + Zrok  
-
-It also removes the packaged dnscrypt-proxy to avoid conflicts.
 
 ### **3. Configures System Services**
 Creates:
@@ -147,7 +143,6 @@ Services managed:
 ```
 tunneld.service
 nginx.service
-dnscrypt-proxy.service
 dnsmasq.service
 dhcpcd.service
 ```
@@ -165,7 +160,7 @@ http://10.0.0.1
 Verify services:
 
 ```bash
-systemctl status nginx tunneld dnscrypt-proxy dnsmasq dhcpcd
+systemctl status nginx tunneld dnsmasq dhcpcd
 ```
 
 Expose services using Zrok.
@@ -184,7 +179,6 @@ The uninstaller will:
 
 1. Stop and disable:
    - tunneld  
-   - dnscrypt-proxy  
    - zrok-* services  
 
 2. Remove:
@@ -195,7 +189,6 @@ The uninstaller will:
 /var/lib/tunneld
 /var/log/tunneld
 /var/run/tunneld
-/usr/local/bin/dnscrypt-proxy
 ```
 
 3. Remove nginx site link/config (`/etc/nginx/sites-{available,enabled}/tunneld-gateway`)  
@@ -227,7 +220,6 @@ The uninstaller never removes OS packages (dnsmasq, dhcpcd, nginx, iptables, etc
 | `interfaces.conf`                     | Interface + subnet config       |
 | `dhcpcd.conf`                         | Gateway routing                 |
 | `dnsmasq.conf`                        | DNS & DHCP config               |
-| `dnscrypt/dnscrypt-proxy.toml`        | Encrypted DNS settings          |
 | `blacklists/dnsmasq-system.blacklist` | Ad/tracker block rules          |
 | `/etc/nginx/sites-available/`         | Place your nginx site files; enable via `sites-enabled` |
 
@@ -239,7 +231,6 @@ Tunneld builds on:
 
 - OpenZiti / Zrok  
 - Hagezi DNS Blocklists  
-- dnscrypt-proxy  
 - dnsmasq  
 - dhcpcd
 - nginx

@@ -10,7 +10,6 @@ CONFIG_DIR="/etc/tunneld"
 LOG_DIR="/var/log/tunneld"
 DATA_DIR="/var/lib/tunneld"
 RUN_DIR="/var/run/tunneld"
-DNSCRYPT_BIN="/usr/local/bin/dnscrypt-proxy"
 NGINX_SITE="/etc/nginx/sites-available/tunneld-gateway"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/tunneld-gateway"
 
@@ -18,12 +17,11 @@ whiptail --title "Uninstall Tunneld (Pre-Alpha)" --yesno \
 "Completely remove Tunneld and its pre-alpha files?
 
 This will:
-  1) Stop and disable Tunneld + dnscrypt-proxy
+  1) Stop and disable Tunneld
   2) Remove app/config/data/logs
   3) Remove nginx site link/config (tunneld-gateway)
-  4) Remove systemd units (tunneld, dnscrypt-proxy, zrok-*)
+  4) Remove systemd units (tunneld, zrok-*)
   5) Remove dnsmasq/dhcpcd symlinks (if pointing to Tunneld)
-  6) Remove /usr/local/bin/dnscrypt-proxy
 
 Important:
   - This uninstaller NEVER removes system packages installed via apt
@@ -42,9 +40,6 @@ echo "Stopping services..."
 systemctl stop tunneld 2>/dev/null || true
 systemctl disable tunneld 2>/dev/null || true
 
-systemctl stop dnscrypt-proxy 2>/dev/null || true
-systemctl disable dnscrypt-proxy 2>/dev/null || true
-
 if ls /etc/systemd/system/zrok-*.service >/dev/null 2>&1 || \
    ls /etc/systemd/system/zrok-access-*.service >/dev/null 2>&1; then
   for u in /etc/systemd/system/zrok-*.service /etc/systemd/system/zrok-access-*.service; do
@@ -57,7 +52,6 @@ fi
 
 echo "Removing systemd unit files..."
 rm -f /etc/systemd/system/tunneld.service
-rm -f /etc/systemd/system/dnscrypt-proxy.service
 rm -f /etc/systemd/system/zrok-*.service /etc/systemd/system/zrok-access-*.service
 systemctl daemon-reload || true
 
@@ -94,11 +88,6 @@ fi
 
 systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
 
-if [ -x "$DNSCRYPT_BIN" ]; then
-  rm -f "$DNSCRYPT_BIN"
-  echo "Removed $DNSCRYPT_BIN"
-fi
-
 echo "Removing Tunneld directories..."
 rm -rf "$APP_DIR" "$CONFIG_DIR" "$DATA_DIR" "$LOG_DIR" "$RUN_DIR"
 
@@ -120,8 +109,7 @@ Removed:
   - $LOG_DIR
   - $RUN_DIR
   - $NGINX_SITE (and enabled link)
-  - /usr/local/bin/dnscrypt-proxy
-  - systemd units (tunneld, dnscrypt-proxy, zrok-* / zrok-access-*)
+  - systemd units (tunneld, zrok-* / zrok-access-*)
 
 Left untouched unless they pointed to Tunneld:
   - /etc/dnsmasq.conf
