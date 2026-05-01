@@ -83,8 +83,7 @@ A standalone gateway that:
 
 ### **Built-in Network Services**
 
-- **DNS & DHCP** - via dnsmasq  
-- **System-wide blocklists** - via Hagezi DNS blocklist  
+- **DNS & DHCP** - via dnsmasq, forwarding to user-configured DNS server  
 
 All traffic stays local - no reliance on central infrastructure.
 
@@ -129,9 +128,7 @@ Notes:
 
 - The default nginx site is disabled to avoid port conflicts; add your own sites under `/etc/nginx/sites-available` and enable them as needed.
 
-Fetches + installs the Hagezi blocklist.
-
-### **4. Deploys Tunneld**
+### **3. Deploys Tunneld**
 - Optionally downloads the pre-alpha release  
 - Verifies the checksum  
 - Extracts files to `/opt/tunneld`  
@@ -220,7 +217,6 @@ The uninstaller never removes OS packages (dnsmasq, dhcpcd, nginx, iptables, etc
 | `interfaces.conf`                     | Interface + subnet config       |
 | `dhcpcd.conf`                         | Gateway routing                 |
 | `dnsmasq.conf`                        | DNS & DHCP config               |
-| `blacklists/dnsmasq-system.blacklist` | Ad/tracker block rules          |
 | `/etc/nginx/sites-available/`         | Place your nginx site files; enable via `sites-enabled` |
 
 ---
@@ -230,7 +226,6 @@ The uninstaller never removes OS packages (dnsmasq, dhcpcd, nginx, iptables, etc
 Tunneld builds on:
 
 - OpenZiti / Zrok  
-- Hagezi DNS Blocklists  
 - dnsmasq  
 - dhcpcd
 - nginx

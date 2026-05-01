@@ -20,11 +20,10 @@ CONFIG_DIR="/etc/tunneld"
 LOG_DIR="/var/log/tunneld"
 DATA_DIR="/var/lib/tunneld"
 RUNTIME_DIR="/var/run/tunneld"
-BLACKLIST_DIR="$CONFIG_DIR/blacklists"
 BACKUP_DIR="$DATA_DIR/backup"
 BACKUP_FILE="$BACKUP_DIR/tunneld-backup.tar.gz"
 
-mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR" "$BLACKLIST_DIR"
+mkdir -p "$APP_DIR" "$CONFIG_DIR" "$LOG_DIR" "$DATA_DIR" "$RUNTIME_DIR"
 
 UP_IFACE="${UP_IFACE:-}"
 DOWN_IFACE="${DOWN_IFACE:-}"
@@ -40,10 +39,8 @@ whiptail --title "Tunneld Installer" --msgbox \
 This wizard will:
   1) Install dependencies
   2) Configure network (upstream/downstream, DHCP)
-  3) Configure dnsmasq
-  4) Fetch blocklist
-  5) (Optional) Download a Tunneld pre-alpha release
-  6) Enable & start services
+  3) (Optional) Download a Tunneld pre-alpha release
+  4) Enable & start services
 
 If an existing installation is found, a backup will be created
 before updating. If the new version fails to start, it will be
@@ -56,7 +53,7 @@ Important:
 
 Press OK to begin." 26 80
 
-whiptail --title "Step 1/6: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl, wireguard-tools" 10 74
+whiptail --title "Step 1/4: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl, wireguard-tools" 10 74
 
 apt-get update
 apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl wireguard-tools -y
@@ -110,9 +107,9 @@ mapfile -t ifaces < <(ip -o link show | awk -F': ' '{print $2}' | grep -vE '^(lo
 if [ ${#ifaces[@]} -eq 0 ]; then whiptail --msgbox "No interfaces found." 8 50; exit 1; fi
 
 menu_items=(); for i in "${ifaces[@]}"; do menu_items+=("$i" ""); done
-UP_IFACE=$(whiptail --title "Step 2/6: Upstream (Internet)" --menu "Select upstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
+UP_IFACE=$(whiptail --title "Step 2/4: Upstream (Internet)" --menu "Select upstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
 menu_items=(); for i in "${ifaces[@]}"; do [ "$i" != "$UP_IFACE" ] && menu_items+=("$i" ""); done
-DOWN_IFACE=$(whiptail --title "Step 2/6: Downstream (LAN)" --menu "Select downstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
+DOWN_IFACE=$(whiptail --title "Step 2/4: Downstream (LAN)" --menu "Select downstream interface" 20 60 10 "${menu_items[@]}" 3>&1 1>&2 2>&3) || exit 1
 
 GATEWAY=$(whiptail --title "Gateway IP" --inputbox "Gateway IP (CIDR /24 assumed)" 10 60 "$GATEWAY" 3>&1 1>&2 2>&3) || exit 1
 DHCP_START=$(whiptail --title "DHCP Start" --inputbox "Start address" 10 60 "$DHCP_START" 3>&1 1>&2 2>&3) || exit 1
@@ -139,7 +136,7 @@ nohook wpa_supplicant
 metric 100
 EOF
 ln -sf "$CONFIG_DIR/dhcpcd.conf" /etc/dhcpcd.conf
-whiptail --title "Step 2/6" --msgbox "Network settings saved." 8 60
+whiptail --title "Step 2/4" --msgbox "Network settings saved." 8 60
 
 cat > "$CONFIG_DIR/dnsmasq.conf" <<EOF
 port=5336
@@ -148,8 +145,7 @@ dhcp-range=${DHCP_START},${DHCP_END},255.255.255.0,infinite
 dhcp-option=option:router,$GATEWAY
 dhcp-option=option:dns-server,$GATEWAY
 no-resolv
-server=127.0.0.1#5335
-conf-file=$BLACKLIST_DIR/dnsmasq-system.blacklist
+server=1.1.1.1
 EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 
@@ -157,22 +153,6 @@ ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 mkdir -p /etc/dnsmasq.d
 touch /etc/dnsmasq.d/tunneld_resources.conf
 chown "$REAL_USER:$REAL_GROUP" /etc/dnsmasq.d/tunneld_resources.conf
-
-whiptail --title "Step 3/6" --msgbox "dnsmasq configured." 8 60
-
-cat > "$APP_DIR/update_blacklist.sh" <<'EOF'
-#!/bin/bash
-set -euo pipefail
-BLACKLIST_DIR="/etc/tunneld/blacklists"
-LOG_DIR="/var/log/tunneld"
-mkdir -p "$BLACKLIST_DIR" "$LOG_DIR"
-curl -fsSL https://raw.githubusercontent.com/hagezi/dns-blocklists/main/dnsmasq/pro.txt -o "$BLACKLIST_DIR/dnsmasq-system.blacklist"
-echo "Updated: $(date)" | tee -a "$LOG_DIR/blacklist.log"
-systemctl is-active --quiet dnsmasq && systemctl reload dnsmasq || true
-EOF
-chmod +x "$APP_DIR/update_blacklist.sh"
-"$APP_DIR/update_blacklist.sh" || true
-whiptail --title "Step 4/6" --msgbox "Hagezi blocklist fetched." 8 60
 
 # --- Backup existing installation ---
 if [ -d "$APP_DIR/bin" ] && [ -x "$APP_DIR/bin/tunneld" ]; then
@@ -186,7 +166,7 @@ if [ -d "$APP_DIR/bin" ] && [ -x "$APP_DIR/bin/tunneld" ]; then
   fi
 fi
 
-if whiptail --title "Step 5/6: Tunneld Release" --yesno "Download and install pre-alpha build?" 10 60; then
+if whiptail --title "Step 3/4: Tunneld Release" --yesno "Download and install pre-alpha build?" 10 60; then
   tmpdir=$(mktemp -d)
   beta_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/tunneld-pre-alpha.tar.gz"
   sums_url="https://raw.githubusercontent.com/toreanjoel/tunneld-installer/refs/heads/main/releases/checksums.txt"
@@ -251,10 +231,6 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-EOF
-
-tee /etc/resolv.conf > /dev/null <<EOF
-nameserver 127.0.0.1
 EOF
 
 systemctl daemon-reload
