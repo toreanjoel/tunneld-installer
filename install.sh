@@ -145,7 +145,6 @@ dhcp-range=${DHCP_START},${DHCP_END},255.255.255.0,infinite
 dhcp-option=option:router,$GATEWAY
 dhcp-option=option:dns-server,$GATEWAY
 no-resolv
-server=1.1.1.1
 EOF
 ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 
@@ -153,6 +152,9 @@ ln -sf "$CONFIG_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 mkdir -p /etc/dnsmasq.d
 touch /etc/dnsmasq.d/tunneld_resources.conf
 chown "$REAL_USER:$REAL_GROUP" /etc/dnsmasq.d/tunneld_resources.conf
+
+# Default DNS server — managed by the Tunneld app at runtime
+echo "server=1.1.1.1" > /etc/dnsmasq.d/tunneld_dns.conf
 
 # --- Backup existing installation ---
 if [ -d "$APP_DIR/bin" ] && [ -x "$APP_DIR/bin/tunneld" ]; then
