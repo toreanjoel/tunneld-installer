@@ -62,7 +62,7 @@ apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libw
 if ! modprobe -n wireguard 2>/dev/null; then
   echo "WireGuard kernel module not found, installing wireguard-dkms..."
   apt-get install -y wireguard-dkms || whiptail --title "WireGuard Warning" --msgbox \
-    "WireGuard kernel module not detected and DKMS install failed.\n\nVPN features may not work. Ensure your kernel is 5.6+ or\ninstall wireguard-dkms manually." 12 70
+    "WireGuard kernel module not detected and DKMS install failed.\n\nMesh networking features may not work. Ensure your kernel is 5.6+ or\ninstall wireguard-dkms manually." 12 70
 fi
 timedatectl set-ntp true
 systemctl enable --now systemd-timesyncd.service
