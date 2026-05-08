@@ -60,7 +60,7 @@ systemctl unmask dhcpcd.service 2>/dev/null || true
 systemctl unmask dnsmasq.service 2>/dev/null || true
 
 apt-get update
-apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd zram-tools openssl wireguard-tools -y
+apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd zram-tools openssl wireguard-tools wpasupplicant -y
 
 # Verify WireGuard kernel module is available (built-in on kernel 5.6+, DKMS fallback)
 if ! modprobe -n wireguard 2>/dev/null; then
