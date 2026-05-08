@@ -53,10 +53,14 @@ Important:
 
 Press OK to begin." 26 80
 
-whiptail --title "Step 1/4: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, fake-hwclock, zram-tools, openssl, wireguard-tools" 10 74
+whiptail --title "Step 1/4: Dependencies" --msgbox "We will install: Zrok2, OpenZiti, dnsmasq, dhcpcd, nginx, git, dkms, build-essential, libjson-c-dev, libwebsockets-dev, libssl-dev, iptables, iproute2, bc, unzip, iw, systemd-timesyncd, zram-tools, openssl, wireguard-tools" 10 74
+
+systemctl unmask systemd-time-wait-sync.service 2>/dev/null || true
+systemctl unmask dhcpcd.service 2>/dev/null || true
+systemctl unmask dnsmasq.service 2>/dev/null || true
 
 apt-get update
-apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd fake-hwclock zram-tools openssl wireguard-tools -y
+apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd zram-tools openssl wireguard-tools -y
 
 # Verify WireGuard kernel module is available (built-in on kernel 5.6+, DKMS fallback)
 if ! modprobe -n wireguard 2>/dev/null; then
@@ -66,7 +70,6 @@ if ! modprobe -n wireguard 2>/dev/null; then
 fi
 timedatectl set-ntp true
 systemctl enable --now systemd-timesyncd.service
-systemctl enable --now fake-hwclock.service
 systemctl enable --now systemd-time-wait-sync.service
 
 # Configure Zram & Swappiness

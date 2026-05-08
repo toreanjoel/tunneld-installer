@@ -25,7 +25,7 @@ This will:
 
 Important:
   - This uninstaller NEVER removes system packages installed via apt
-    (e.g. dnsmasq, dhcpcd, iptables, fake-hwclock, etc.).
+    (e.g. dnsmasq, dhcpcd, iptables etc.).
   - If you no longer need those packages, please remove them manually
     with apt (e.g. 'sudo apt-get purge dnsmasq dhcpcd').
 
@@ -117,11 +117,10 @@ Left untouched unless they pointed to Tunneld:
 
 Note:
   - nginx remains installed; default site stays disabled unless you re-enable it.
-  - System packages installed as dependencies (dnsmasq, dhcpcd, iptables,
-    fake-hwclock, etc.) were NOT removed.
+  - System packages installed as dependencies (dnsmasq, dhcpcd, iptables etc.) were NOT removed.
   - The Tunneld uninstaller never removes OS packages.
     If you want to remove them, use e.g.:
-      sudo apt-get purge dnsmasq dhcpcd nginx iptables fake-hwclock
+      sudo apt-get purge dnsmasq dhcpcd nginx iptables
 
 Base services (dhcpcd, dnsmasq) were restarted.
 " 24 84
