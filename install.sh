@@ -119,6 +119,23 @@ DHCP_START=$(whiptail --title "DHCP Start" --inputbox "Start address" 10 60 "$DH
 DHCP_END=$(whiptail --title "DHCP End" --inputbox "End address" 10 60 "$DHCP_END" 3>&1 1>&2 2>&3) || exit 1
 WIFI_COUNTRY=$(whiptail --title "Wi-Fi Country / Regulatory Domain" --inputbox "Enter the 2-letter country code (example: US, ZA, DE, UK)." 12 72 "" 3>&1 1>&2 2>&3) || exit 1
 
+if [ -n "$UP_IFACE" ]; then
+  if [ ! -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+    cat > /etc/wpa_supplicant/wpa_supplicant.conf <<EOF
+country=$WIFI_COUNTRY
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+EOF
+    chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
+  fi
+
+  ln -sf /etc/wpa_supplicant/wpa_supplicant.conf \
+         "/etc/wpa_supplicant/wpa_supplicant-${UP_IFACE}.conf"
+
+  systemctl unmask "wpa_supplicant@${UP_IFACE}.service" 2>/dev/null || true
+  systemctl enable --now "wpa_supplicant@${UP_IFACE}.service"
+fi
+
 cat > "$CONFIG_DIR/interfaces.conf" <<EOF
 UPSTREAM_INTERFACE=$UP_IFACE
 DOWNSTREAM_INTERFACE=$DOWN_IFACE
@@ -209,8 +226,8 @@ SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
 [Unit]
 Description=Tunneld
-After=network-online.target dhcpcd.service
-Wants=network-online.target dhcpcd.service
+After=network-online.target dhcpcd.service wpa_supplicant@${UP_IFACE}.service
+Wants=network-online.target dhcpcd.service wpa_supplicant@${UP_IFACE}.service
 
 [Service]
 Type=simple
