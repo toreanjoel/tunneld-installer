@@ -297,11 +297,14 @@ App:    $APP_DIR
 Config: $CONFIG_DIR
 Data:   $DATA_DIR
 
-Access:
+Access (after reboot):
   http://$GATEWAY
 
-Services verified.
-Done." 24 80
+A reboot is required to finalize network changes." 24 80
+
+  if whiptail --title "Reboot" --yesno "Reboot now?" 8 50; then
+    reboot
+  fi
 else
   # Service failed to start
   JOURNAL_OUTPUT=$(journalctl -u tunneld --no-pager -n 20 2>/dev/null || echo "Unable to retrieve logs.")
