@@ -59,8 +59,16 @@ systemctl unmask systemd-time-wait-sync.service 2>/dev/null || true
 systemctl unmask dhcpcd.service 2>/dev/null || true
 systemctl unmask dnsmasq.service 2>/dev/null || true
 
+# Free wlan from other network managers; Tunneld owns the stack.
+for svc in NetworkManager NetworkManager-wait-online iwd systemd-networkd wpa_supplicant.service; do
+  systemctl disable --now "$svc" 2>/dev/null || true
+  systemctl mask "$svc" 2>/dev/null || true
+done
+
 apt-get update
-apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd zram-tools openssl wireguard-tools wpasupplicant -y
+apt-get install dnsmasq dhcpcd nginx git dkms build-essential libjson-c-dev libwebsockets-dev libssl-dev iptables iproute2 bc unzip iw systemd-timesyncd zram-tools openssl wireguard-tools wpasupplicant rfkill -y
+
+rfkill unblock wifi || true
 
 # Verify WireGuard kernel module is available (built-in on kernel 5.6+, DKMS fallback)
 if ! modprobe -n wireguard 2>/dev/null; then
