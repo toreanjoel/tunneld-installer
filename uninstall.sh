@@ -20,7 +20,7 @@ This will:
   1) Stop and disable Tunneld
   2) Remove app/config/data/logs
   3) Remove nginx site link/config (tunneld-gateway)
-  4) Remove systemd units (tunneld, zrok-*)
+  4) Remove systemd units (tunneld, wlan-recover, zrok-*)
   5) Remove dnsmasq/dhcpcd symlinks (if pointing to Tunneld)
 
 Important:
@@ -38,7 +38,13 @@ fi
 
 echo "Stopping services..."
 systemctl stop tunneld 2>/dev/null || true
+systemctl stop wlan-recover 2>/dev/null || true
 systemctl disable tunneld 2>/dev/null || true
+systemctl disable wlan-recover 2>/dev/null || true
+
+# Remove wlan-recover unit before dealing with wpa_supplicant
+rm -f /etc/systemd/system/wlan-recover.service
+rm -f /opt/tunneld/scripts/wlan-recover.sh
 
 if ls /etc/systemd/system/zrok-*.service >/dev/null 2>&1 || \
    ls /etc/systemd/system/zrok-access-*.service >/dev/null 2>&1; then
@@ -109,6 +115,7 @@ Removed:
   - $LOG_DIR
   - $RUN_DIR
   - $NGINX_SITE (and enabled link)
+  - wlan-recover.service + recovery script
   - systemd units (tunneld, zrok-* / zrok-access-*)
 
 Left untouched unless they pointed to Tunneld:

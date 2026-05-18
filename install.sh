@@ -181,8 +181,78 @@ mkdir -p /etc/dnsmasq.d
 touch /etc/dnsmasq.d/tunneld_resources.conf
 chown "$REAL_USER:$REAL_GROUP" /etc/dnsmasq.d/tunneld_resources.conf
 
-# Default DNS server — managed by the Tunneld app at runtime
+# Default DNS server - managed by the Tunneld app at runtime
 echo "server=1.1.1.1" > /etc/dnsmasq.d/tunneld_dns.conf
+
+# --- WiFi pre-flight recovery script and systemd service ---
+mkdir -p /opt/tunneld/scripts
+cat > /opt/tunneld/scripts/wlan-recover.sh <<'RECOVERY_EOF'
+#!/bin/bash
+set -euo pipefail
+
+IFACE="${1:-wlan0}"
+MAX_WAIT=30
+
+echo "Waiting up to ${MAX_WAIT}s for ${IFACE} to be in an operable state..."
+
+for i in $(seq 1 $MAX_WAIT); do
+    if ip link show "$IFACE" 2>/dev/null | grep -q "state UP"; then
+        echo "${IFACE} is up and healthy."
+        exit 0
+    fi
+
+    if ip link show "$IFACE" 2>/dev/null | grep -q "BROADCAST"; then
+        echo "${IFACE} exists but is down. Trying to bring it up..."
+        ip link set "$IFACE" up 2>/dev/null && exit 0
+
+        echo "${IFACE} busy. Performing driver reset ($i/${MAX_WAIT})..."
+
+        systemctl stop wpa_supplicant@${IFACE} 2>/dev/null || true
+        pkill -9 wpa_supplicant 2>/dev/null || true
+        ip link set "$IFACE" down 2>/dev/null || true
+        rmmod -f iwlmvm 2>/dev/null || true
+        rmmod -f iwlwifi 2>/dev/null || true
+
+        for pci in $(lspci -D | grep -i iwl | awk '{print $1}'); do
+            echo 1 > /sys/bus/pci/devices/${pci}/remove 2>/dev/null || true
+        done
+
+        echo 1 > /sys/bus/pci/rescan
+        sleep 3
+        modprobe iwlwifi
+        sleep 2
+        ip link set "$IFACE" up 2>/dev/null || true
+    else
+        sleep 1
+        continue
+    fi
+done
+
+echo "ERROR: ${IFACE} recovery failed after ${MAX_WAIT} attempts."
+exit 1
+RECOVERY_EOF
+chmod +x /opt/tunneld/scripts/wlan-recover.sh
+
+cat > /etc/systemd/system/wlan-recover.service <<EOF
+[Unit]
+Description=WiFi interface recovery before Tunneld
+Before=wpa_supplicant@${UP_IFACE}.service
+Before=tunneld.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/tunneld/scripts/wlan-recover.sh ${UP_IFACE}
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable wlan-recover.service
 
 # --- Backup existing installation ---
 if [ -d "$APP_DIR/bin" ] && [ -x "$APP_DIR/bin/tunneld" ]; then
@@ -234,7 +304,8 @@ SECRET_KEY_BASE=$(openssl rand -hex 64)
 cat > /etc/systemd/system/tunneld.service <<EOF
 [Unit]
 Description=Tunneld
-After=network-online.target dhcpcd.service wpa_supplicant@${UP_IFACE}.service
+After=network-online.target dhcpcd.service wlan-recover.service wpa_supplicant@${UP_IFACE}.service
+Requires=wlan-recover.service
 Wants=network-online.target dhcpcd.service wpa_supplicant@${UP_IFACE}.service
 
 [Service]
